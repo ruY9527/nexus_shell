@@ -1,0 +1,296 @@
+//
+//  AppSettings.swift
+//  nexus_shell
+//
+//  Created by baoyang on 2026/4/22.
+//
+
+import Foundation
+import LocalAuthentication
+import UIKit
+import SwiftUI
+import Combine
+
+/// 应用设置管理类
+/// 使用 UserDefaults 存储
+final class AppSettings {
+    static let shared = AppSettings()
+    
+    // MARK: - UserDefaults Keys
+    
+    private enum Keys {
+        static let hapticFeedbackEnabled = "hapticFeedbackEnabled"
+        static let biometricLockEnabled = "biometricLockEnabled"
+        static let autoRefreshEnabled = "autoRefreshEnabled"
+        static let refreshInterval = "refreshInterval"
+        static let terminalFontSize = "terminalFontSize"
+        static let colorScheme = "colorScheme"
+        static let language = "language"
+    }
+    
+    private let defaults = UserDefaults.standard
+    
+    // MARK: - Settings
+    
+    var hapticFeedbackEnabled: Bool {
+        get { defaults.bool(forKey: Keys.hapticFeedbackEnabled) }
+        set {
+            defaults.set(newValue, forKey: Keys.hapticFeedbackEnabled)
+            notifyChange()
+        }
+    }
+    
+    var biometricLockEnabled: Bool {
+        get { defaults.bool(forKey: Keys.biometricLockEnabled) }
+        set {
+            defaults.set(newValue, forKey: Keys.biometricLockEnabled)
+            notifyChange()
+        }
+    }
+    
+    var autoRefreshEnabled: Bool {
+        get { defaults.bool(forKey: Keys.autoRefreshEnabled) }
+        set {
+            defaults.set(newValue, forKey: Keys.autoRefreshEnabled)
+            notifyChange()
+        }
+    }
+    
+    var refreshInterval: Int {
+        get {
+            let value = defaults.integer(forKey: Keys.refreshInterval)
+            return value == 0 ? 5 : value
+        }
+        set {
+            defaults.set(newValue, forKey: Keys.refreshInterval)
+            notifyChange()
+        }
+    }
+    
+    var terminalFontSize: Int {
+        get {
+            let value = defaults.integer(forKey: Keys.terminalFontSize)
+            return value == 0 ? 14 : value
+        }
+        set {
+            defaults.set(newValue, forKey: Keys.terminalFontSize)
+            notifyChange()
+        }
+    }
+    
+    var colorSchemeString: String {
+        get { defaults.string(forKey: Keys.colorScheme) ?? "dark" }
+        set {
+            defaults.set(newValue, forKey: Keys.colorScheme)
+            notifyChange()
+        }
+    }
+    
+    /// 获取 SwiftUI ColorScheme
+    var preferredColorScheme: ColorScheme? {
+        switch colorSchemeString {
+        case "dark":
+            return .dark
+        case "light":
+            return .light
+        case "system":
+            return nil  // nil 表示跟随系统
+        default:
+            return .dark
+        }
+    }
+    
+    var language: String {
+        get { defaults.string(forKey: Keys.language) ?? "system" }
+        set {
+            defaults.set(newValue, forKey: Keys.language)
+            notifyChange()
+        }
+    }
+    
+    // MARK: - Initialization
+    
+    private init() {
+        // 设置首次启动的默认值
+        if defaults.object(forKey: Keys.hapticFeedbackEnabled) == nil {
+            defaults.set(true, forKey: Keys.hapticFeedbackEnabled)
+        }
+        if defaults.object(forKey: Keys.autoRefreshEnabled) == nil {
+            defaults.set(true, forKey: Keys.autoRefreshEnabled)
+        }
+        if defaults.object(forKey: Keys.refreshInterval) == nil {
+            defaults.set(5, forKey: Keys.refreshInterval)
+        }
+        if defaults.object(forKey: Keys.terminalFontSize) == nil {
+            defaults.set(14, forKey: Keys.terminalFontSize)
+        }
+        if defaults.object(forKey: Keys.colorScheme) == nil {
+            defaults.set("dark", forKey: Keys.colorScheme)
+        }
+        if defaults.object(forKey: Keys.language) == nil {
+            defaults.set("system", forKey: Keys.language)
+        }
+    }
+    
+    private func notifyChange() {
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .settingsChanged, object: nil)
+        }
+    }
+    
+    // MARK: - Biometric
+    
+    var biometricType: BiometricType {
+        let context = LAContext()
+        var error: NSError?
+        
+        guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {
+            return .none
+        }
+        
+        switch context.biometryType {
+        case .faceID:
+            return .faceID
+        case .touchID:
+            return .touchID
+        default:
+            return .none
+        }
+    }
+    
+    var supportsBiometric: Bool {
+        return biometricType != .none
+    }
+    
+    func authenticateWithBiometric() async -> Bool {
+        let context = LAContext()
+        context.localizedCancelTitle = "Cancel"
+        context.localizedFallbackTitle = "Use Passcode"
+        
+        let reason = "Authenticate to access Nexus Shell"
+        
+        do {
+            let success = try await context.evaluatePolicy(
+                .deviceOwnerAuthenticationWithBiometrics,
+                localizedReason: reason
+            )
+            
+            if success && hapticFeedbackEnabled {
+                let generator = UINotificationFeedbackGenerator()
+                generator.prepare()
+                generator.notificationOccurred(.success)
+            }
+            
+            return success
+        } catch {
+            if hapticFeedbackEnabled {
+                let generator = UINotificationFeedbackGenerator()
+                generator.prepare()
+                generator.notificationOccurred(.error)
+            }
+            return false
+        }
+    }
+    
+    // MARK: - Reset
+    
+    func resetAllSettings() {
+        defaults.set(true, forKey: Keys.hapticFeedbackEnabled)
+        defaults.set(false, forKey: Keys.biometricLockEnabled)
+        defaults.set(true, forKey: Keys.autoRefreshEnabled)
+        defaults.set(5, forKey: Keys.refreshInterval)
+        defaults.set(14, forKey: Keys.terminalFontSize)
+        defaults.set("dark", forKey: Keys.colorScheme)
+        defaults.set("system", forKey: Keys.language)
+        
+        notifyChange()
+        
+        if hapticFeedbackEnabled {
+            let generator = UINotificationFeedbackGenerator()
+            generator.prepare()
+            generator.notificationOccurred(.success)
+        }
+    }
+}
+
+// MARK: - Settings Observable Object
+
+/// 用于 SwiftUI 视图监听设置变化
+class SettingsObserver: ObservableObject {
+    static let shared = SettingsObserver()
+    
+    @Published var colorScheme: ColorScheme?
+    @Published var hapticFeedbackEnabled: Bool
+    @Published var biometricLockEnabled: Bool
+    @Published var autoRefreshEnabled: Bool
+    @Published var refreshInterval: Int
+    @Published var terminalFontSize: Int
+    @Published var colorSchemeString: String
+    @Published var language: String
+    
+    private init() {
+        colorScheme = AppSettings.shared.preferredColorScheme
+        hapticFeedbackEnabled = AppSettings.shared.hapticFeedbackEnabled
+        biometricLockEnabled = AppSettings.shared.biometricLockEnabled
+        autoRefreshEnabled = AppSettings.shared.autoRefreshEnabled
+        refreshInterval = AppSettings.shared.refreshInterval
+        terminalFontSize = AppSettings.shared.terminalFontSize
+        colorSchemeString = AppSettings.shared.colorSchemeString
+        language = AppSettings.shared.language
+        
+        // 监听设置变化
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(settingsDidChange),
+            name: .settingsChanged,
+            object: nil
+        )
+    }
+    
+    @objc private func settingsDidChange() {
+        DispatchQueue.main.async {
+            self.colorScheme = AppSettings.shared.preferredColorScheme
+            self.hapticFeedbackEnabled = AppSettings.shared.hapticFeedbackEnabled
+            self.biometricLockEnabled = AppSettings.shared.biometricLockEnabled
+            self.autoRefreshEnabled = AppSettings.shared.autoRefreshEnabled
+            self.refreshInterval = AppSettings.shared.refreshInterval
+            self.terminalFontSize = AppSettings.shared.terminalFontSize
+            self.colorSchemeString = AppSettings.shared.colorSchemeString
+            self.language = AppSettings.shared.language
+        }
+    }
+    
+    func setColorScheme(_ value: String) {
+        AppSettings.shared.colorSchemeString = value
+    }
+}
+
+// MARK: - Notification Extension
+
+extension Notification.Name {
+    static let settingsChanged = Notification.Name("AppSettingsChanged")
+}
+
+// MARK: - Biometric Type
+
+enum BiometricType {
+    case none
+    case faceID
+    case touchID
+    
+    var icon: String {
+        switch self {
+        case .none: return "lock"
+        case .faceID: return "face.smiling"
+        case .touchID: return "fingerprint"
+        }
+    }
+    
+    var displayName: String {
+        switch self {
+        case .none: return "Biometric Lock"
+        case .faceID: return "Face ID"
+        case .touchID: return "Touch ID"
+        }
+    }
+}

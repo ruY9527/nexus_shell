@@ -1,0 +1,1099 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {
+
+    },
+    "%@@%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@@%2$@"
+          }
+        }
+      }
+    },
+    "%@ms" : {
+
+    },
+    "%lld" : {
+
+    },
+    "%lld sec" : {
+
+    },
+    "%lld servers" : {
+
+    },
+    "%lld%%" : {
+
+    },
+    "$" : {
+
+    },
+    "0 servers" : {
+
+    },
+    "1.0.0" : {
+
+    },
+    "2026.04.22" : {
+
+    },
+    "About" : {
+
+    },
+    "Add Server" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Server"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加服务器"
+          }
+        }
+      }
+    },
+    "Add servers and connect to view activity logs" : {
+
+    },
+    "Add servers first in Servers tab" : {
+
+    },
+    "Additional Information" : {
+
+    },
+    "All" : {
+
+    },
+    "All Servers" : {
+
+    },
+    "All settings will be restored to their default values." : {
+
+    },
+    "Appearance" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appearance"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "外观"
+          }
+        }
+      }
+    },
+    "Are you sure you want to delete \"%@\"? This action cannot be undone and all credentials will be removed." : {
+
+    },
+    "Are you sure you want to delete \"%@\"? This action cannot be undone." : {
+
+    },
+    "Authentication" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Authentication"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "认证方式"
+          }
+        }
+      }
+    },
+    "Auto Refresh" : {
+
+    },
+    "Automatic Cleanup" : {
+
+    },
+    "Automatically refresh server status" : {
+
+    },
+    "Avg" : {
+
+    },
+    "Back" : {
+
+    },
+    "Basic Info" : {
+
+    },
+    "Basic Information" : {
+
+    },
+    "Biometric Lock" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biometric Lock"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "生物识别锁"
+          }
+        }
+      }
+    },
+    "Build" : {
+
+    },
+    "Cancel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消"
+          }
+        }
+      }
+    },
+    "Cannot Delete Folder" : {
+
+    },
+    "Clear" : {
+
+    },
+    "Clear All" : {
+
+    },
+    "Clear All Logs" : {
+
+    },
+    "Clear All Logs?" : {
+
+    },
+    "Clear Logs for Selected Server" : {
+
+    },
+    "Clear Logs Older Than 7 Days" : {
+
+    },
+    "Close" : {
+
+    },
+    "CLR" : {
+
+    },
+    "Color" : {
+
+    },
+    "Connect" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接"
+          }
+        }
+      }
+    },
+    "Connect to servers to view activity logs" : {
+
+    },
+    "Connected" : {
+
+    },
+    "Connecting..." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecting..."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接中..."
+          }
+        }
+      }
+    },
+    "Connection Details" : {
+
+    },
+    "Connection Failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connection Failed"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接失败"
+          }
+        }
+      }
+    },
+    "Connection History" : {
+
+    },
+    "Connection Info" : {
+
+    },
+    "Connection Test" : {
+
+    },
+    "CPU" : {
+
+    },
+    "CPU Usage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CPU Usage"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CPU 占用率"
+          }
+        }
+      }
+    },
+    "CPU Usage Trend" : {
+
+    },
+    "Create" : {
+
+    },
+    "Create Folder" : {
+
+    },
+    "Create folders to organize servers by company, or add servers directly to the root folder." : {
+
+    },
+    "Created" : {
+
+    },
+    "Dark (Recommended)" : {
+
+    },
+    "Dashboard" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dashboard"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仪表盘"
+          }
+        }
+      }
+    },
+    "Data Management" : {
+
+    },
+    "Database Size" : {
+
+    },
+    "Delete" : {
+
+    },
+    "Delete Folder?" : {
+
+    },
+    "Delete Server" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除"
+          }
+        }
+      }
+    },
+    "Delete Server?" : {
+
+    },
+    "Description (optional)" : {
+
+    },
+    "Disconnect" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disconnect"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "断开连接"
+          }
+        }
+      }
+    },
+    "Done" : {
+
+    },
+    "Duration: %@" : {
+
+    },
+    "Edit Server" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑"
+          }
+        }
+      }
+    },
+    "English" : {
+
+    },
+    "Enter notes" : {
+
+    },
+    "Enter tags separated by commas" : {
+
+    },
+    "Error" : {
+
+    },
+    "Errors" : {
+
+    },
+    "ESC" : {
+
+    },
+    "Estimated Log Size" : {
+
+    },
+    "Excellent" : {
+
+    },
+    "Fair" : {
+
+    },
+    "Folder" : {
+
+    },
+    "Folder \"%@\" contains %lld servers. Please delete all servers in this folder first before deleting the folder." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Folder \"%1$@\" contains %2$lld servers. Please delete all servers in this folder first before deleting the folder."
+          }
+        }
+      }
+    },
+    "Folder Name" : {
+
+    },
+    "Folders" : {
+
+    },
+    "Full" : {
+
+    },
+    "GitHub Repository" : {
+
+    },
+    "Good" : {
+
+    },
+    "Haptic Feedback" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Haptic Feedback"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "触觉反馈"
+          }
+        }
+      }
+    },
+    "Host" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Host"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "主机"
+          }
+        }
+      }
+    },
+    "Icon" : {
+
+    },
+    "Interaction" : {
+
+    },
+    "Language" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Language"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "语言"
+          }
+        }
+      }
+    },
+    "Last 5 min" : {
+
+    },
+    "Last Connected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last Connected"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最后连接"
+          }
+        }
+      }
+    },
+    "Latency" : {
+
+    },
+    "Light" : {
+
+    },
+    "Log Entries" : {
+
+    },
+    "Log Level Statistics" : {
+
+    },
+    "Log Storage" : {
+
+    },
+    "Logs" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Logs"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日志"
+          }
+        }
+      }
+    },
+    "Logs are automatically cleared after 7 days" : {
+
+    },
+    "Logs older than 7 days are automatically removed when the app starts. This helps prevent excessive storage usage." : {
+
+    },
+    "Manual Cleanup" : {
+
+    },
+    "Max" : {
+
+    },
+    "Mem" : {
+
+    },
+    "Memory Usage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Memory Usage"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "内存占用率"
+          }
+        }
+      }
+    },
+    "Min" : {
+
+    },
+    "Move" : {
+
+    },
+    "Name" : {
+
+    },
+    "New Folder" : {
+
+    },
+    "New Server" : {
+
+    },
+    "No Active Session" : {
+
+    },
+    "No Activity Logs" : {
+
+    },
+    "No Logs Available" : {
+
+    },
+    "No Logs for Selected Server" : {
+
+    },
+    "No ping data available" : {
+
+    },
+    "No servers added" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No servers added"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无服务器"
+          }
+        }
+      }
+    },
+    "No Servers in %@" : {
+
+    },
+    "No Servers Yet" : {
+
+    },
+    "Not Available" : {
+
+    },
+    "Notes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notes"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "备注"
+          }
+        }
+      }
+    },
+    "Offline" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Offline"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "离线"
+          }
+        }
+      }
+    },
+    "OK" : {
+
+    },
+    "Online" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Online"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在线"
+          }
+        }
+      }
+    },
+    "Passphrase (optional)" : {
+
+    },
+    "Password" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Password"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "密码"
+          }
+        }
+      }
+    },
+    "Ping Response" : {
+
+    },
+    "Poor" : {
+
+    },
+    "Port" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Port"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "端口"
+          }
+        }
+      }
+    },
+    "Preview" : {
+
+    },
+    "Private Key" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Private Key"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "私钥"
+          }
+        }
+      }
+    },
+    "Quality" : {
+
+    },
+    "Quick Fill: SSH Defaults" : {
+
+    },
+    "Reason: %@" : {
+
+    },
+    "Recent" : {
+
+    },
+    "Refresh Interval" : {
+
+    },
+    "Require authentication to open the app" : {
+
+    },
+    "Reset" : {
+
+    },
+    "Reset All Settings" : {
+
+    },
+    "Reset All Settings?" : {
+
+    },
+    "Retention Policy" : {
+
+    },
+    "Root" : {
+
+    },
+    "Root Servers" : {
+
+    },
+    "Save" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存"
+          }
+        }
+      }
+    },
+    "Save Server?" : {
+
+    },
+    "Search logs..." : {
+
+    },
+    "Search servers..." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search servers..."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索服务器..."
+          }
+        }
+      }
+    },
+    "Security" : {
+
+    },
+    "Select a server to start SSH session" : {
+
+    },
+    "Select Server" : {
+
+    },
+    "Server Name" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Server Name"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务器名称"
+          }
+        }
+      }
+    },
+    "Servers" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Servers"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务器"
+          }
+        }
+      }
+    },
+    "Settings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置"
+          }
+        }
+      }
+    },
+    "Show All Logs" : {
+
+    },
+    "Show Less" : {
+
+    },
+    "Show More" : {
+
+    },
+    "Storage Info" : {
+
+    },
+    "Storage Information" : {
+
+    },
+    "Strength:" : {
+
+    },
+    "System" : {
+
+    },
+    "System Ready" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System Ready"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "系统就绪"
+          }
+        }
+      }
+    },
+    "TAB" : {
+
+    },
+    "Tags" : {
+
+    },
+    "Tags (comma separated)" : {
+
+    },
+    "Tap + to add your first server" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap + to add your first server"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点击 + 添加您的第一台服务器"
+          }
+        }
+      }
+    },
+    "Terminal" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terminal"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "终端"
+          }
+        }
+      }
+    },
+    "Terminal Font Size" : {
+
+    },
+    "Test %@" : {
+
+    },
+    "Test Connection" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Test Connection"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测试连接"
+          }
+        }
+      }
+    },
+    "Test Haptic Feedback" : {
+
+    },
+    "Testing" : {
+
+    },
+    "This will permanently delete all %lld log entries." : {
+
+    },
+    "This will permanently remove the server and all associated credentials." : {
+
+    },
+    "This will reset all settings to their default values. Your servers and connection data will not be affected." : {
+
+    },
+    "Timeline" : {
+
+    },
+    "Total" : {
+
+    },
+    "Uptime: %@" : {
+
+    },
+    "Username" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Username"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用户名"
+          }
+        }
+      }
+    },
+    "Version" : {
+
+    },
+    "Vibration feedback for actions" : {
+
+    },
+    "Warning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warning"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "警告"
+          }
+        }
+      }
+    },
+    "Warnings" : {
+
+    },
+    "When enabled, %@ will be required each time you open the app." : {
+
+    },
+    "Would you like to save this server configuration?" : {
+
+    },
+    "中文" : {
+
+    },
+    "输入命令..." : {
+
+    }
+  },
+  "version" : "1.0"
+}
