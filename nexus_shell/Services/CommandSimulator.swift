@@ -335,9 +335,9 @@ final class CommandSimulator {
     private func handleProcFile(_ path: String) -> String {
         switch path {
         case "/proc/1/status":
-            return "Name:	init\nState:	S (sleeping)\nPid:	1\nPPid:	0\n"
+            return "Name:    init\nState:    S (sleeping)\nPid:    1\nPPid:    0\n"
         case "/proc/self/status":
-            return "Name:	bash\nState:	S (sleeping)\nPid:	12345\nPPid:	12344\nUid:	1000	1000	1000	1000\n"
+            return "Name:    bash\nState:    S (sleeping)\nPid:    12345\nPPid:    12344\nUid:    1000    1000    1000    1000\n"
         case "/proc/self/cmdline":
             return "/bin/bash\0"
         case "/proc/self/environ":

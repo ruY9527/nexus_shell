@@ -197,7 +197,7 @@ class LogRepository {
             : "SSH connection failed to \(serverName)"
         
         let log = LogEntry(serverId: serverId, level: level, message: message)
-        insert(log)
+        _ = insert(log)
     }
     
     /// 写入认证日志
@@ -208,33 +208,33 @@ class LogRepository {
             : "Authentication failed using \(method)"
         
         let log = LogEntry(serverId: serverId, level: level, message: message)
-        insert(log)
+        _ = insert(log)
     }
     
     /// 写入命令执行日志
     func logCommand(serverId: UUID, command: String) {
         let message = "Executing command: \(command)"
         let log = LogEntry(serverId: serverId, level: .debug, message: message)
-        insert(log)
+        _ = insert(log)
     }
     
     /// 写入错误日志
     func logError(serverId: UUID, error: String) {
         let log = LogEntry(serverId: serverId, level: .error, message: error)
-        insert(log)
+        _ = insert(log)
     }
     
     /// 写入状态变化日志
     func logStatusChange(serverId: UUID, serverName: String, oldStatus: ServerStatus, newStatus: ServerStatus) {
         let message = "Server \(serverName) status changed: \(oldStatus.rawValue) → \(newStatus.rawValue)"
         let log = LogEntry(serverId: serverId, level: .info, message: message)
-        insert(log)
+        _ = insert(log)
     }
     
     /// 写入断开连接日志
     func logDisconnect(serverId: UUID, serverName: String) {
         let message = "Disconnected from \(serverName)"
         let log = LogEntry(serverId: serverId, level: .info, message: message)
-        insert(log)
+        _ = insert(log)
     }
 }

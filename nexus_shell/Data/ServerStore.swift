@@ -178,8 +178,8 @@ class ServerStore: ObservableObject {
         let interval = AppSettings.shared.refreshInterval
         
         if AppSettings.shared.autoRefreshEnabled {
-            updateTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(interval), repeats: true) { [weak self] _ in
-                Task { @MainActor in
+            updateTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(interval), repeats: true) { _ in
+                Task { @MainActor [weak self] in
                     self?.refreshAllServers()
                 }
             }
@@ -273,7 +273,7 @@ class ServerStore: ObservableObject {
         
         sampleServers[3].status = .offline
         
-        repository.insertBatch(sampleServers)
+        _ = repository.insertBatch(sampleServers)
         loadServers()
     }
     

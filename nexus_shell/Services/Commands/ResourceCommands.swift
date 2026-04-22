@@ -131,7 +131,7 @@ enum ResourceGenerator {
         
         var output = "\(header)\n\(subHeader)\n"
         
-        for i in 0..<count {
+        for _ in 0..<count {
             let r = Int.random(in: 0...2)
             let b = Int.random(in: 0...1)
             output += " \(r)  \(b)      0 748000  50000 200000    0    0    \(Int.random(in: 0...10))    \(Int.random(in: 0...5))  \(Int.random(in: 100...500))  \(Int.random(in: 200...800))   5  2 92  1  0\n"

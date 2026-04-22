@@ -8,6 +8,12 @@
 import Foundation
 import Network
 
+/// 用于在并发环境中安全地修改值的包装类
+final class UnsafeSendableBox<T>: @unchecked Sendable {
+    nonisolated(unsafe) var value: T
+    nonisolated init(_ value: T) { self.value = value }
+}
+
 /// SSH 客户端管理器
 final class SSHClientManager {
     static let shared = SSHClientManager()
@@ -53,31 +59,34 @@ final class SSHClientManager {
                 to: .hostPort(host: NWEndpoint.Host(host), port: NWEndpoint.Port(integerLiteral: UInt16(port))),
                 using: .tcp
             )
-            
-            var hasResumed = false
-            
+
+            final class ResumeState: Sendable {
+                let hasResumed = UnsafeSendableBox<Bool>(false)
+            }
+            let resumeState = ResumeState()
+
             connection.stateUpdateHandler = { state in
-                guard !hasResumed else { return }
+                guard !resumeState.hasResumed.value else { return }
                 switch state {
                 case .ready:
                     connection.cancel()
-                    hasResumed = true
+                    resumeState.hasResumed.value = true
                     continuation.resume(returning: true)
                 case .failed, .waiting:
                     connection.cancel()
-                    hasResumed = true
+                    resumeState.hasResumed.value = true
                     continuation.resume(returning: false)
                 default:
                     break
                 }
             }
-            
+
             connection.start(queue: .global())
-            
+
             DispatchQueue.global().asyncAfter(deadline: .now() + 3) {
-                guard !hasResumed else { return }
+                guard !resumeState.hasResumed.value else { return }
                 connection.cancel()
-                hasResumed = true
+                resumeState.hasResumed.value = true
                 continuation.resume(returning: false)
             }
         }
@@ -402,7 +411,7 @@ actor ServerMonitor {
 }
 
 extension String {
-    func extractNumbers() -> [Double] {
+    nonisolated func extractNumbers() -> [Double] {
         let regex = try? NSRegularExpression(pattern: "[\\d.]+")
         let matches = regex?.matches(in: self, range: NSRange(startIndex..., in: self))
         return matches?.compactMap { m in

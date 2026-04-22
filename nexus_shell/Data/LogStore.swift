@@ -58,7 +58,7 @@ class LogStore: ObservableObject {
     
     /// 添加日志
     func addLog(_ log: LogEntry) {
-        repository.insert(log)
+        _ = repository.insert(log)
         loadLogs()
     }
     
@@ -102,19 +102,19 @@ class LogStore: ObservableObject {
     
     /// 清除所有日志
     func clearAllLogs() {
-        repository.deleteAll()
+        _ = repository.deleteAll()
         loadLogs()
     }
     
     /// 清除指定服务器的日志
     func clearLogsForServer(_ serverId: UUID) {
-        repository.deleteByServer(serverId)
+        _ = repository.deleteByServer(serverId)
         loadLogs()
     }
     
     /// 清除过期日志
     func cleanupOldLogs(days: Int = 7) {
-        repository.cleanupOldLogs(days: days)
+        _ = repository.cleanupOldLogs(days: days)
         loadLogs()
     }
     

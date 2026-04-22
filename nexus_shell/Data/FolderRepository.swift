@@ -122,7 +122,7 @@ class FolderRepository {
     /// 强制删除文件夹（将服务器移动到根目录后删除）
     func forceDelete(_ folderId: UUID) -> Bool {
         // 先将文件夹内的服务器移动到根目录
-        moveServersToRoot(folderId)
+        _ = moveServersToRoot(folderId)
         
         // 删除文件夹
         let sql = "DELETE FROM folders WHERE id = ?;"

@@ -270,11 +270,11 @@ struct AddServerView: View {
         let tempServerId = UUID()
         
         if authMethod == .password {
-            KeychainHelper.shared.savePassword(password, for: tempServerId)
+            _ = KeychainHelper.shared.savePassword(password, for: tempServerId)
         } else {
-            KeychainHelper.shared.savePrivateKey(privateKey, for: tempServerId)
+            _ = KeychainHelper.shared.savePrivateKey(privateKey, for: tempServerId)
             if !passphrase.isEmpty {
-                KeychainHelper.shared.savePassphrase(passphrase, for: tempServerId)
+                _ = KeychainHelper.shared.savePassphrase(passphrase, for: tempServerId)
             }
         }
         
@@ -361,7 +361,7 @@ struct AddServerView: View {
                 return
             }
             if !passphrase.isEmpty {
-                KeychainHelper.shared.savePassphrase(passphrase, for: server.id)
+                _ = KeychainHelper.shared.savePassphrase(passphrase, for: server.id)
             }
         }
         

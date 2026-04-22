@@ -108,12 +108,12 @@ class DatabaseManager {
         let createLogsServerIndex = "CREATE INDEX IF NOT EXISTS idx_logs_server_id ON logs(server_id);"
         let createServersFolderIndex = "CREATE INDEX IF NOT EXISTS idx_servers_folder_id ON servers(folder_id);"
         
-        executeQuery(createFoldersTable)
-        executeQuery(createServersTable)
-        executeQuery(createLogsTable)
-        executeQuery(createLogsIndex)
-        executeQuery(createLogsServerIndex)
-        executeQuery(createServersFolderIndex)
+        _ = executeQuery(createFoldersTable)
+        _ = executeQuery(createServersTable)
+        _ = executeQuery(createLogsTable)
+        _ = executeQuery(createLogsIndex)
+        _ = executeQuery(createLogsServerIndex)
+        _ = executeQuery(createServersFolderIndex)
         
         // 数据库迁移：检查并添加缺失的列
         migrateDatabase()
@@ -142,11 +142,11 @@ class DatabaseManager {
         if !hasFolderId {
             print("数据库迁移：添加 folder_id 列到 servers 表")
             let addFolderIdSql = "ALTER TABLE servers ADD COLUMN folder_id TEXT;"
-            executeQuery(addFolderIdSql)
+            _ = executeQuery(addFolderIdSql)
             
             // 创建索引
             let addIndexSql = "CREATE INDEX IF NOT EXISTS idx_servers_folder_id ON servers(folder_id);"
-            executeQuery(addIndexSql)
+            _ = executeQuery(addIndexSql)
         }
     }
     
@@ -340,14 +340,14 @@ class DatabaseManager {
     // MARK: - Transaction
     
     func beginTransaction() {
-        executeQuery("BEGIN TRANSACTION;")
+        _ = executeQuery("BEGIN TRANSACTION;")
     }
     
     func commitTransaction() {
-        executeQuery("COMMIT;")
+        _ = executeQuery("COMMIT;")
     }
     
     func rollbackTransaction() {
-        executeQuery("ROLLBACK;")
+        _ = executeQuery("ROLLBACK;")
     }
 }

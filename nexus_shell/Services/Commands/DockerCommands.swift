@@ -362,13 +362,14 @@ enum DockerGenerator {
         """
     }
     
-    static func generatePush() -> String """
+    static func generatePush() -> String {
+        return """
         The push refers to repository [docker.io/my-image]
         a1b2c3d4e5f6: Preparing
         a1b2c3d4e5f6: Pushing [>                                                 ] 0B/50MB
         a1b2c3d4e5f6: Pushed
         latest: digest: sha256:1234567890abcdef size: 1234
-        
+
         """
     }
     

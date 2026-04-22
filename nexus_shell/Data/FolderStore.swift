@@ -160,7 +160,7 @@ class FolderStore: ObservableObject {
     
     /// 更新文件夹排序
     func updateSortOrder(_ folderIds: [UUID]) {
-        repository.updateSortOrders(folderIds)
+        _ = repository.updateSortOrders(folderIds)
         loadFolders()
     }
 }

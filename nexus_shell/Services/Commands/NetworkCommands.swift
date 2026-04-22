@@ -595,15 +595,16 @@ enum NetworkGenerator {
         """
     }
     
-    static func generateUFWStatus() -> String """
+    static func generateUFWStatus() -> String {
+        return """
         Status: active
-        
+
         To                         Action      From
         --                         ------      ----
         22/tcp                     ALLOW       Anywhere
         80/tcp                     ALLOW       Anywhere
         443/tcp                    ALLOW       Anywhere
-        
+
         """
     }
     

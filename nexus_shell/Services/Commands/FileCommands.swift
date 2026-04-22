@@ -89,7 +89,7 @@ enum FileGenerator {
             return "\(perms)  1 \(username) \(username)  \(sizeStr)  \(now.formatted(date: .abbreviated, time: .omitted))  \(name)"
         }.joined(separator: "\n")
         
-        return "total \(humanReadable ? formatSize(total) : "\(total")\n" + output + "\n"
+        return "total \(humanReadable ? formatSize(total) : String(total))\n" + output + "\n"
     }
     
     static func generateLSFiltered(_ pattern: String, username: String) -> String {

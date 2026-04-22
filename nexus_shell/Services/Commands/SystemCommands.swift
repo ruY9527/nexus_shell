@@ -33,7 +33,7 @@ enum SystemCommands {
         case "date":
             return Date().formatted(date: .complete, time: .complete) + "\n"
         case "date +%Y-%m-%d":
-            return Date().formatted(date: .iso8601, time: .omitted) + "\n"
+            return Date().formatted(.iso8601) + "\n"
         case "date +%H:%M:%S":
             return Date().formatted(date: .omitted, time: .shortened) + "\n"
         case "cal":
@@ -132,10 +132,10 @@ enum SystemInfoGenerator {
            Universal time: \(Date().formatted(date: .complete, time: .complete))
                  RTC time: \(Date().formatted(date: .abbreviated, time: .shortened))
                 Time zone: UTC (UTC, +0000)
-System clock synchronized: yes
+        System clock synchronized: yes
               NTP service: active
           RTC in local TZ: no
-        
+
         """
     }
     
