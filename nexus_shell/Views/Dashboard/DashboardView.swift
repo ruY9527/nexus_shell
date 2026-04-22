@@ -13,7 +13,8 @@ struct DashboardView: View {
     @StateObject private var serverStore = ServerStore.shared
     @State private var cpuHistory: [(Date, Double)] = []
     @State private var isRefreshing = false
-    
+    @State private var showingAddServer = false
+
     private let refreshTimer = Timer.publish(every: 5, on: .main, in: .common).autoconnect()
     
     private var settings: AppSettings {
@@ -31,27 +32,33 @@ struct DashboardView: View {
     
     var body: some View {
         NavigationStack {
-            ScrollView {
-                LazyVStack(spacing: DesignSystem.Spacing.md) {
-                    // 统计概览
-                    DashboardStatsOverview(servers: serverStore.servers)
-                    
-                    // CPU 使用率图表（仅显示在线服务器）
-                    if !onlineServers.isEmpty && settings.autoRefreshEnabled {
-                        CPUChartSection(servers: onlineServers)
-                    }
-                    
-                    // 服务器状态卡片列表
-                    ForEach(allServers) { server in
-                        ServerStatusCard(server: server)
-                    }
-                    
-                    if serverStore.servers.isEmpty {
-                        EmptyStateView(onAdd: {})
+            Group {
+                if allServers.isEmpty {
+                    // 无服务器时的空状态视图
+                    EmptyStateView(onAdd: { showingAddServer = true })
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    // 有服务器时显示正常内容
+                    ScrollView {
+                        LazyVStack(spacing: DesignSystem.Spacing.md) {
+                            // 统计概览
+                            DashboardStatsOverview(servers: allServers)
+
+                            // CPU 使用率图表（仅显示在线服务器）
+                            if !onlineServers.isEmpty && settings.autoRefreshEnabled {
+                                CPUChartSection(servers: onlineServers)
+                            }
+
+                            // 服务器状态卡片列表
+                            ForEach(allServers) { server in
+                                ServerStatusCard(server: server)
+                            }
+                        }
+                        .padding(.horizontal, DesignSystem.Spacing.md)
+                        .padding(.top, DesignSystem.Spacing.md)
+                        .padding(.bottom, DesignSystem.Spacing.xl) // 底部空间
                     }
                 }
-                .padding(.horizontal, DesignSystem.Spacing.md)
-                .padding(.top, DesignSystem.Spacing.md)
             }
             .navigationTitle(String(localized: "Dashboard"))
             .navigationBarTitleDisplayMode(.large)
@@ -74,6 +81,11 @@ struct DashboardView: View {
                 if settings.autoRefreshEnabled {
                     refreshAllServers()
                 }
+            }
+            .sheet(isPresented: $showingAddServer) {
+                AddServerView()
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
             }
         }
     }
@@ -329,20 +341,36 @@ struct ChartPlaceholderView: View {
 /// 空状态视图
 struct EmptyStateView: View {
     let onAdd: () -> Void
-    
+
     var body: some View {
         VStack(spacing: DesignSystem.Spacing.lg) {
             Image(systemName: "server.rack")
                 .font(.system(size: 48))
                 .foregroundStyle(AppColors.secondaryText)
-            
+
             Text(String(localized: "No servers added"))
                 .font(AppTypography.heading3)
                 .foregroundStyle(AppColors.secondaryText)
-            
+
             Text(String(localized: "Tap + to add your first server"))
                 .font(AppTypography.bodySmall)
                 .foregroundStyle(AppColors.secondaryText.opacity(0.7))
+
+            // 添加服务器按钮
+            Button {
+                onAdd()
+            } label: {
+                HStack {
+                    Image(systemName: "plus.circle")
+                    Text(String(localized: "Add Server"))
+                }
+                .font(AppTypography.label)
+                .foregroundStyle(AppColors.primaryText)
+                .padding(.horizontal, DesignSystem.Spacing.lg)
+                .padding(.vertical, DesignSystem.Spacing.md)
+                .background(AppColors.primaryGradient)
+                .cornerRadius(DesignSystem.Radius.md)
+            }
         }
         .padding(.vertical, DesignSystem.Spacing.xxl)
     }

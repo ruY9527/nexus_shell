@@ -50,7 +50,6 @@ struct LogsView: View {
             }
             .navigationTitle(String(localized: "Logs"))
             .navigationBarTitleDisplayMode(.large)
-            .searchable(text: $searchText, prompt: "Search logs...")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Menu {
@@ -174,6 +173,31 @@ struct LogsView: View {
                 List {
                     // 日志统计头部
                     LogStatsHeader(logStore: logStore)
+                    
+                    // 搜索框
+                    HStack(spacing: DesignSystem.Spacing.sm) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(AppColors.secondaryText)
+                        
+                        TextField("Search logs...", text: $searchText)
+                            .textFieldStyle(.plain)
+                            .foregroundStyle(AppColors.primaryText)
+                        
+                        if !searchText.isEmpty {
+                            Button {
+                                searchText = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(AppColors.secondaryText)
+                            }
+                        }
+                    }
+                    .padding(DesignSystem.Spacing.sm)
+                    .background(AppColors.cardBackground)
+                    .cornerRadius(DesignSystem.Radius.sm)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 0, leading: DesignSystem.Spacing.md, bottom: 0, trailing: DesignSystem.Spacing.md))
+                    .listRowSeparator(.hidden)
                     
                     ForEach(filteredEntries) { entry in
                         LogEntryRow(

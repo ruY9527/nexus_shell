@@ -211,6 +211,11 @@ final class CommandSimulator {
             return output
         }
         
+        // 实用工具命令（压缩、SSH、系统工具、文本处理、编码等）
+        if let output = UtilityCommands.execute(command, username: username, homeDirectory: homeDirectory) {
+            return output
+        }
+        
         // 特殊命令处理
         switch command {
         case "exit", "logout":
@@ -479,14 +484,19 @@ final class CommandSimulator {
         
         File system:     ls, ls -l, ls -la, ls -lh, cd, pwd, cat, touch, mkdir, rm, cp, mv, find, which
         System info:     uname, hostname, uptime, date, whoami, id, w, who, last, lscpu, lsblk, lsmem
-        Resources:       free, free -h, free -m, df, df -h, df -m, du, du -h, top, htop
-        Processes:       ps, ps aux, ps aux | grep, kill, killall, pgrep, pkill, pstree
-        Network:         ifconfig, ip addr, ip route, netstat, ss, ping, traceroute, nslookup, dig
-        Docker:          docker ps, docker images, docker logs, docker exec, docker stats
-        Services:        systemctl status/list/start/stop/restart/reload, service, journalctl
-        Users:           whoami, id, groups, passwd, useradd, userdel, usermod, last, lastlog
-        Logs:            journalctl, tail /var/log/syslog, cat /var/log/auth.log, dmesg
-        Package:         apt/apt-get, dpkg, yum, dnf, rpm, pacman, snap, pip
+        Resources:       free, free -h, free -m, df, df -h, df -m, du, du -h, top, htop, vmstat, iostat
+        Processes:       ps, ps aux, ps aux | grep, kill, killall, pgrep, pkill, pstree, pidstat
+        Network:         ifconfig, ip addr, ip route, netstat, ss, ping, traceroute, nslookup, dig, nmap
+        Docker:          docker ps, docker images, docker logs, docker exec, docker stats, docker compose
+        Services:        systemctl status/list/start/stop/restart, service, journalctl, crontab
+        Users:           whoami, id, groups, passwd, useradd, userdel, usermod, last, lastlog, chage
+        Logs:            journalctl, tail /var/log/syslog, cat /var/log/auth.log, dmesg, grep
+        Package:         apt/apt-get, dpkg, yum, dnf, snap, pip, npm
+        Compression:     tar, gzip, gunzip, zip, unzip, 7z, bzip2, xz
+        SSH/Transfer:    ssh-keygen, ssh-copy-id, scp, sftp, rsync
+        System utils:    lsof, nc (netcat), screen, tmux, nohup, watch, time, dd, yes, expect
+        Text processing: sed, awk, cut, tr, rev, shuf, fmt, fold, paste, join, split, nl, pr
+        Encoding:        base64, md5sum, sha256sum, sha1sum, cksum, xxd, hexdump, od, strings
         
         Type any command to see simulated output.
         

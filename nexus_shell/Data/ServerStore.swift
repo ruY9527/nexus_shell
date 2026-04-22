@@ -13,10 +13,11 @@ import Combine
 @MainActor
 class ServerStore: ObservableObject {
     static let shared = ServerStore()
-    
+
     @Published var servers: [Server] = []
     @Published var searchText: String = ""
     @Published var currentFolderId: UUID?  // 当前显示的文件夹（nil为根目录）
+    @Published var activeSession: ServerSession?  // 当前活跃的 SSH 会话
     
     private let repository = ServerRepository.shared
     private var updateTimer: Timer?

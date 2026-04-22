@@ -12,7 +12,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var settings = SettingsObserver.shared
     @State private var showingResetConfirmation = false
-    
+
     var body: some View {
         NavigationStack {
             Form {
@@ -26,7 +26,7 @@ struct SettingsView: View {
                     .onChange(of: settings.colorSchemeString) { _, newValue in
                         settings.setColorScheme(newValue)
                     }
-                    
+
                     Picker(String(localized: "Language"), selection: $settings.language) {
                         Text("System").tag("system")
                         Text("English").tag("en")
@@ -35,16 +35,16 @@ struct SettingsView: View {
                     .onChange(of: settings.language) { _, newValue in
                         AppSettings.shared.language = newValue
                     }
-                    
+
                     HStack {
                         Text("Terminal Font Size")
                             .foregroundStyle(AppColors.primaryText)
-                        
+
                         Spacer()
-                        
+
                         Text("\(settings.terminalFontSize)")
                             .foregroundStyle(AppColors.secondaryText)
-                        
+
                         Stepper("", value: $settings.terminalFontSize, in: 10...24)
                             .labelsHidden()
                             .onChange(of: settings.terminalFontSize) { _, newValue in
@@ -56,67 +56,21 @@ struct SettingsView: View {
                         .font(AppTypography.labelSmall)
                         .foregroundStyle(AppColors.secondaryText)
                 }
-                
-                // 安全设置
-                Section {
-                    if AppSettings.shared.supportsBiometric {
-                        HStack {
-                            VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
-                                Text(AppSettings.shared.biometricType.displayName)
-                                    .foregroundStyle(AppColors.primaryText)
-                                
-                                Text("Require authentication to open the app")
-                                    .font(AppTypography.bodySmall)
-                                    .foregroundStyle(AppColors.secondaryText)
-                            }
-                            
-                            Spacer()
-                            
-                            Toggle("", isOn: $settings.biometricLockEnabled)
-                                .labelsHidden()
-                                .tint(AppColors.accent)
-                                .onChange(of: settings.biometricLockEnabled) { _, newValue in
-                                    AppSettings.shared.biometricLockEnabled = newValue
-                                }
-                        }
-                    } else {
-                        HStack {
-                            Text("Biometric Lock")
-                                .foregroundStyle(AppColors.secondaryText)
-                            
-                            Spacer()
-                            
-                            Text("Not Available")
-                                .font(AppTypography.bodySmall)
-                                .foregroundStyle(AppColors.disabledText)
-                        }
-                    }
-                } header: {
-                    Text("Security")
-                        .font(AppTypography.labelSmall)
-                        .foregroundStyle(AppColors.secondaryText)
-                } footer: {
-                    if AppSettings.shared.supportsBiometric {
-                        Text("When enabled, \(AppSettings.shared.biometricType.displayName) will be required each time you open the app.")
-                            .font(AppTypography.bodySmall)
-                            .foregroundStyle(AppColors.secondaryText)
-                    }
-                }
-                
+
                 // 交互设置
                 Section {
                     HStack {
                         VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
                             Text(String(localized: "Haptic Feedback"))
                                 .foregroundStyle(AppColors.primaryText)
-                            
+
                             Text("Vibration feedback for actions")
                                 .font(AppTypography.bodySmall)
                                 .foregroundStyle(AppColors.secondaryText)
                         }
-                        
+
                         Spacer()
-                        
+
                         Toggle("", isOn: $settings.hapticFeedbackEnabled)
                             .labelsHidden()
                             .tint(AppColors.accent)
@@ -124,19 +78,19 @@ struct SettingsView: View {
                                 AppSettings.shared.hapticFeedbackEnabled = newValue
                             }
                     }
-                    
+
                     HStack {
                         VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
                             Text("Auto Refresh")
                                 .foregroundStyle(AppColors.primaryText)
-                            
+
                             Text("Automatically refresh server status")
                                 .font(AppTypography.bodySmall)
                                 .foregroundStyle(AppColors.secondaryText)
                         }
-                        
+
                         Spacer()
-                        
+
                         Toggle("", isOn: $settings.autoRefreshEnabled)
                             .labelsHidden()
                             .tint(AppColors.accent)
@@ -144,17 +98,17 @@ struct SettingsView: View {
                                 AppSettings.shared.autoRefreshEnabled = newValue
                             }
                     }
-                    
+
                     if settings.autoRefreshEnabled {
                         HStack {
                             Text("Refresh Interval")
                                 .foregroundStyle(AppColors.primaryText)
-                            
+
                             Spacer()
-                            
+
                             Text("\(settings.refreshInterval) sec")
                                 .foregroundStyle(AppColors.secondaryText)
-                            
+
                             Stepper("", value: $settings.refreshInterval, in: 3...30)
                                 .labelsHidden()
                                 .onChange(of: settings.refreshInterval) { _, newValue in
@@ -167,37 +121,7 @@ struct SettingsView: View {
                         .font(AppTypography.labelSmall)
                         .foregroundStyle(AppColors.secondaryText)
                 }
-                
-                // 测试
-                Section {
-                    Button {
-                        testHapticFeedback()
-                    } label: {
-                        HStack {
-                            Image(systemName: "hand.tap")
-                            Text("Test Haptic Feedback")
-                        }
-                        .foregroundStyle(AppColors.accent)
-                    }
-                    .disabled(!settings.hapticFeedbackEnabled)
-                    
-                    if AppSettings.shared.supportsBiometric {
-                        Button {
-                            testBiometricAuth()
-                        } label: {
-                            HStack {
-                                Image(systemName: AppSettings.shared.biometricType.icon)
-                                Text("Test \(AppSettings.shared.biometricType.displayName)")
-                            }
-                            .foregroundStyle(AppColors.secondaryAccent)
-                        }
-                    }
-                } header: {
-                    Text("Testing")
-                        .font(AppTypography.labelSmall)
-                        .foregroundStyle(AppColors.secondaryText)
-                }
-                
+
                 // 数据管理
                 Section {
                     Button {
@@ -218,29 +142,29 @@ struct SettingsView: View {
                         .font(AppTypography.bodySmall)
                         .foregroundStyle(AppColors.secondaryText)
                 }
-                
+
                 // 关于
                 Section {
                     HStack {
                         Text("Version")
                             .foregroundStyle(AppColors.primaryText)
-                        
+
                         Spacer()
-                        
+
                         Text("1.0.0")
                             .foregroundStyle(AppColors.secondaryText)
                     }
-                    
+
                     HStack {
                         Text("Build")
                             .foregroundStyle(AppColors.primaryText)
-                        
+
                         Spacer()
-                        
+
                         Text("2026.04.22")
                             .foregroundStyle(AppColors.secondaryText)
                     }
-                    
+
                     Link(destination: URL(string: "https://github.com")!) {
                         HStack {
                             Image(systemName: "link")
@@ -281,24 +205,6 @@ struct SettingsView: View {
         }
         // 使用动态颜色方案
         .preferredColorScheme(settings.colorScheme)
-    }
-    
-    private func testHapticFeedback() {
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-        }
-    }
-    
-    private func testBiometricAuth() {
-        Task {
-            _ = await AppSettings.shared.authenticateWithBiometric()
-        }
     }
 }
 

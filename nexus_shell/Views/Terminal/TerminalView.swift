@@ -11,14 +11,17 @@ import UIKit
 /// 终端视图
 struct TerminalView: View {
     @StateObject private var serverStore = ServerStore.shared
-    @State private var activeSession: ServerSession?
     @State private var showingServerPicker = false
     @State private var commandInput: String = ""
     @State private var showingQuickCommands = false
     @State private var inputFieldId: UUID = UUID()  // 用于重建输入框
-    
+
     private var settings: AppSettings { AppSettings.shared }
-    
+
+    private var activeSession: ServerSession? {
+        serverStore.activeSession
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -93,7 +96,7 @@ struct TerminalView: View {
     
     private func connectToServer(_ server: Server) {
         let session = ServerSession(server: server)
-        activeSession = session
+        serverStore.activeSession = session
         
         Task {
             await session.connect()
@@ -110,8 +113,8 @@ struct TerminalView: View {
     }
     
     private func disconnect() {
-        activeSession?.disconnect()
-        activeSession = nil
+        serverStore.activeSession?.disconnect()
+        serverStore.activeSession = nil
         commandInput = ""
         showingQuickCommands = false
         

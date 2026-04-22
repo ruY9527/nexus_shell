@@ -13,23 +13,21 @@ struct MainTabView: View {
     @State private var showingSettings = false
 
     var body: some View {
-        NavigationStack {
-            // 内容区域 - 使用 safeAreaInset 确保内容不被 TabBar 覆盖
-            TabContentView(selectedTab: selectedTab)
-                .safeAreaInset(edge: .bottom) {
-                    // 自定义 TabBar 作为底部安全区域
-                    CustomTabBar(
-                        selectedTab: $selectedTab,
-                        showingSettings: $showingSettings
-                    )
-                }
-        }
-        .background(AppColors.background)
-        .sheet(isPresented: $showingSettings) {
-            SettingsView()
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-        }
+        // 内容区域 - 使用 safeAreaInset 确保内容不被 TabBar 覆盖
+        TabContentView(selectedTab: selectedTab)
+            .safeAreaInset(edge: .bottom) {
+                // 自定义 TabBar 作为底部安全区域
+                CustomTabBar(
+                    selectedTab: $selectedTab,
+                    showingSettings: $showingSettings
+                )
+            }
+            .background(AppColors.background)
+            .sheet(isPresented: $showingSettings) {
+                SettingsView()
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
     }
 }
 

@@ -655,9 +655,6 @@
     "No Servers Yet" : {
 
     },
-    "Not Available" : {
-
-    },
     "Notes" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -790,9 +787,6 @@
     "Refresh Interval" : {
 
     },
-    "Require authentication to open the app" : {
-
-    },
     "Reset" : {
 
     },
@@ -850,9 +844,6 @@
           }
         }
       }
-    },
-    "Security" : {
-
     },
     "Select a server to start SSH session" : {
 
@@ -995,9 +986,6 @@
     "Terminal Font Size" : {
 
     },
-    "Test %@" : {
-
-    },
     "Test Connection" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1014,12 +1002,6 @@
           }
         }
       }
-    },
-    "Test Haptic Feedback" : {
-
-    },
-    "Testing" : {
-
     },
     "This will permanently delete all %lld log entries." : {
 
@@ -1080,9 +1062,6 @@
       }
     },
     "Warnings" : {
-
-    },
-    "When enabled, %@ will be required each time you open the app." : {
 
     },
     "Would you like to save this server configuration?" : {
