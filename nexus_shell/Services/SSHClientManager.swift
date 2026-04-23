@@ -18,6 +18,11 @@ final class UnsafeSendableBox<T>: @unchecked Sendable {
 final class SSHClientManager {
     static let shared = SSHClientManager()
     private init() {}
+
+    private static var usesSimulatedNetworkForUITests: Bool {
+        let arguments = ProcessInfo.processInfo.arguments
+        return arguments.contains("--ui-testing") && arguments.contains("--ui-testing-simulated-network")
+    }
     
     // MARK: - Connection Test
     
@@ -33,12 +38,16 @@ final class SSHClientManager {
             return .failure("Network unreachable or connection refused")
         }
         
-        let credentials: String?
+        var credentials: String?
         switch authMethod {
         case .password:
             credentials = KeychainHelper.shared.getPassword(for: serverId)
         case .privateKey:
             credentials = KeychainHelper.shared.getPrivateKey(for: serverId)
+        }
+
+        if credentials == nil && usesSimulatedNetworkForUITests {
+            credentials = "ui-test-credentials"
         }
         
         guard credentials != nil else {
@@ -54,6 +63,10 @@ final class SSHClientManager {
     }
     
     static func testNetworkReachability(host: String, port: Int) async -> Bool {
+        if usesSimulatedNetworkForUITests {
+            return true
+        }
+
         return await withCheckedContinuation { continuation in
             let connection = NWConnection(
                 to: .hostPort(host: NWEndpoint.Host(host), port: NWEndpoint.Port(integerLiteral: UInt16(port))),
@@ -101,12 +114,16 @@ final class SSHClientManager {
         authMethod: AuthMethod,
         serverId: UUID
     ) async throws -> SSHConnection {
-        let credentials: String?
+        var credentials: String?
         switch authMethod {
         case .password:
             credentials = KeychainHelper.shared.getPassword(for: serverId)
         case .privateKey:
             credentials = KeychainHelper.shared.getPrivateKey(for: serverId)
+        }
+
+        if credentials == nil && Self.usesSimulatedNetworkForUITests {
+            credentials = "ui-test-credentials"
         }
         
         guard let credentials else {

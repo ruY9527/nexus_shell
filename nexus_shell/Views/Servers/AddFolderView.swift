@@ -32,10 +32,12 @@ struct AddFolderView: View {
                     TextField("Folder Name", text: $name)
                         .font(AppTypography.body)
                         .focused($nameFieldFocused)
+                        .accessibilityIdentifier("addFolder.name")
                     
                     // 描述
                     TextField("Description (optional)", text: $description)
                         .font(AppTypography.body)
+                        .accessibilityIdentifier("addFolder.description")
                 } header: {
                     Text("Basic Info")
                 }
@@ -121,6 +123,7 @@ struct AddFolderView: View {
                     }
                     .disabled(name.isEmpty)
                     .fontWeight(.semibold)
+                    .accessibilityIdentifier("addFolder.create")
                 }
             }
             .onAppear {

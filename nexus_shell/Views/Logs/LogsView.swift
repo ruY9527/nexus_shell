@@ -19,6 +19,10 @@ struct LogsView: View {
     private var settings: AppSettings {
         AppSettings.shared
     }
+
+    private var allServers: [Server] {
+        serverStore.allServers
+    }
     
     enum ClearOption {
         case all
@@ -42,7 +46,7 @@ struct LogsView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if logStore.logs.isEmpty && serverStore.servers.isEmpty {
+                if logStore.logs.isEmpty && allServers.isEmpty {
                     LogsEmptyState()
                 } else {
                     logListView
@@ -65,7 +69,7 @@ struct LogsView: View {
                         
                         Divider()
                         
-                        ForEach(serverStore.servers) { server in
+                        ForEach(allServers) { server in
                             Button {
                                 logStore.filterByServer(server.id)
                                 if settings.hapticFeedbackEnabled {
@@ -87,7 +91,7 @@ struct LogsView: View {
                     } label: {
                         HStack(spacing: DesignSystem.Spacing.xs) {
                             if let serverId = logStore.selectedServerId,
-                               let server = serverStore.servers.first(where: { $0.id == serverId }) {
+                               let server = allServers.first(where: { $0.id == serverId }) {
                                 Text(server.name)
                                     .font(AppTypography.labelSmall)
                             } else {
@@ -167,7 +171,7 @@ struct LogsView: View {
                 NoLogsView(
                     selectedServerId: logStore.selectedServerId,
                     onSelectServer: { logStore.clearFilters() },
-                    servers: serverStore.servers
+                    servers: allServers
                 )
             } else {
                 List {
@@ -202,7 +206,7 @@ struct LogsView: View {
                     ForEach(filteredEntries) { entry in
                         LogEntryRow(
                             entry: entry,
-                            serverName: serverStore.servers.first(where: { $0.id == entry.serverId })?.name ?? "Unknown"
+                            serverName: allServers.first(where: { $0.id == entry.serverId })?.name ?? "Unknown"
                         )
                     }
                 }
@@ -231,7 +235,7 @@ struct LogsView: View {
             return "Logs older than 7 days will be removed. Recent logs will be preserved."
         case .selectedServer:
             if let serverId = logStore.selectedServerId,
-               let server = serverStore.servers.first(where: { $0.id == serverId }) {
+               let server = allServers.first(where: { $0.id == serverId }) {
                 return "Logs for \"\(server.name)\" will be removed. Other server logs will be preserved."
             }
             return "Logs for selected server will be removed."

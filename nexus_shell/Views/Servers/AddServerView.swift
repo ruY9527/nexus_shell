@@ -74,20 +74,24 @@ struct AddServerView: View {
                     TextField(String(localized: "Server Name"), text: $name)
                         .textContentType(.name)
                         .autocorrectionDisabled()
+                        .accessibilityIdentifier("addServer.name")
                     
                     TextField(String(localized: "Host"), text: $host)
                         .textContentType(.URL)
                         .keyboardType(.URL)
                         .autocapitalization(.none)
                         .autocorrectionDisabled()
+                        .accessibilityIdentifier("addServer.host")
                     
                     TextField(String(localized: "Port"), text: $port)
                         .keyboardType(.numberPad)
+                        .accessibilityIdentifier("addServer.port")
                     
                     TextField(String(localized: "Username"), text: $username)
                         .textContentType(.username)
                         .autocapitalization(.none)
                         .autocorrectionDisabled()
+                        .accessibilityIdentifier("addServer.username")
                     
                     // 文件夹选择
                     Picker(String(localized: "Folder"), selection: $selectedFolderId) {
@@ -118,6 +122,7 @@ struct AddServerView: View {
                     if authMethod == .password {
                         SecureField(String(localized: "Password"), text: $password)
                             .textContentType(.password)
+                            .accessibilityIdentifier("addServer.password")
                         
                         // 密码强度指示器
                         PasswordStrengthIndicator(password: password)
@@ -240,6 +245,7 @@ struct AddServerView: View {
                     }
                     .disabled(!isValid)
                     .fontWeight(.semibold)
+                    .accessibilityIdentifier("addServer.save")
                 }
             }
             .alert("Save Server?", isPresented: $showingSaveConfirmation) {

@@ -98,6 +98,14 @@ class ServerStore: ObservableObject {
     
     /// 更新服务器的文件夹
     func updateServerFolder(_ serverId: UUID, folderId: UUID?) {
+        if let index = servers.firstIndex(where: { $0.id == serverId }) {
+            servers[index].folderId = folderId
+        }
+
+        if activeSession?.server.id == serverId {
+            activeSession?.server.folderId = folderId
+        }
+
         if repository.updateFolder(serverId, folderId: folderId) {
             loadServers()
         }
@@ -114,8 +122,7 @@ class ServerStore: ObservableObject {
     func deleteServer(_ server: Server) {
         if repository.delete(server.id) {
             // 删除相关的 Keychain 凭据
-            KeychainHelper.shared.deletePassword(for: server.id)
-            KeychainHelper.shared.deletePrivateKey(for: server.id)
+            KeychainHelper.shared.deleteAllForServer(server.id)
             loadServers()
         }
     }
@@ -123,8 +130,7 @@ class ServerStore: ObservableObject {
     /// 删除服务器（通过 ID）
     func deleteServer(byId id: UUID) {
         if repository.delete(id) {
-            KeychainHelper.shared.deletePassword(for: id)
-            KeychainHelper.shared.deletePrivateKey(for: id)
+            KeychainHelper.shared.deleteAllForServer(id)
             loadServers()
         }
     }
@@ -275,6 +281,15 @@ class ServerStore: ObservableObject {
         sampleServers[3].status = .offline
         
         _ = repository.insertBatch(sampleServers)
+        for server in sampleServers {
+            _ = KeychainHelper.shared.savePassword("demo-password", for: server.id)
+        }
+
+        let sampleLogs = sampleServers.map {
+            LogEntry(serverId: $0.id, level: .info, message: "Sample log for \($0.name)")
+        }
+        _ = LogRepository.shared.insertBatch(sampleLogs)
+        LogStore.shared.loadLogs()
         loadServers()
     }
     

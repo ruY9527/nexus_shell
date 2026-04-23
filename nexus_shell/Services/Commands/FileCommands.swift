@@ -74,7 +74,7 @@ enum FileGenerator {
             ("README.md", false, 2048)
         ]
         
-        let files = showHidden ? allFiles : allFiles.filter { !$0.1 } // 不隐藏
+        let files = showHidden ? allFiles : allFiles.filter { !$0.0.hasPrefix(".") }
         
         if simple {
             return files.map { $0.0 }.joined(separator: "  ") + "\n"

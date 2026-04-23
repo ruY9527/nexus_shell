@@ -14,6 +14,12 @@ final class KeychainHelper {
     static let shared = KeychainHelper()
     
     private init() {}
+
+    private var uiTestingFallbackStorage: [String: String] = [:]
+
+    private var usesUITestingFallbackStorage: Bool {
+        ProcessInfo.processInfo.arguments.contains("--ui-testing")
+    }
     
     // MARK: - Key Prefix
     
@@ -63,7 +69,16 @@ final class KeychainHelper {
         ]
         
         let status = SecItemAdd(query as CFDictionary, nil)
-        return status == errSecSuccess
+        if status == errSecSuccess {
+            return true
+        }
+
+        if usesUITestingFallbackStorage {
+            uiTestingFallbackStorage[key] = value
+            return true
+        }
+
+        return false
     }
     
     // MARK: - Retrieve
@@ -100,6 +115,9 @@ final class KeychainHelper {
         guard status == errSecSuccess,
               let data = result as? Data,
               let value = String(data: data, encoding: .utf8) else {
+            if usesUITestingFallbackStorage {
+                return uiTestingFallbackStorage[key]
+            }
             return nil
         }
         
@@ -137,6 +155,7 @@ final class KeychainHelper {
         ]
         
         SecItemDelete(query as CFDictionary)
+        uiTestingFallbackStorage.removeValue(forKey: key)
     }
     
     // MARK: - Update

@@ -81,6 +81,7 @@ struct CustomTabBar: View {
                     tab: tab,
                     isSelected: selectedTab == tab
                 )
+                .accessibilityIdentifier("tab.\(tab.rawValue.lowercased())")
                 .onTapGesture {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         selectedTab = tab
@@ -97,6 +98,7 @@ struct CustomTabBar: View {
                 icon: "gearshape.fill",
                 isSelected: showingSettings
             )
+            .accessibilityIdentifier("tab.settings")
             .onTapGesture {
                 showingSettings = true
                 if AppSettings.shared.hapticFeedbackEnabled {
@@ -156,6 +158,9 @@ struct TabBarItem: View {
                 .fill(isSelected ? AppColors.accent.opacity(0.15) : Color.clear)
         )
         .scaleEffect(isSelected ? 1.05 : 1.0)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(displayTitle)
+        .accessibilityAddTraits(.isButton)
     }
 
     private var displayIcon: String {

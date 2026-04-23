@@ -42,14 +42,15 @@ struct TerminalView: View {
                         prompt: "\(session.server.username)@\(session.server.host):~$",
                         text: $commandInput,
                         id: inputFieldId,
-                        onSubmit: {
-                            executeCommand(commandInput)
-                            commandInput = ""
-                        }
+                        isEnabled: session.state == .connected,
+                        onSubmit: executeCommand
                     )
                     
                     // 工具栏
-                    TerminalToolbarView(onKeyPressed: { key in sendKeyToSession(key) })
+                    TerminalToolbarView(
+                        showingQuickCommands: $showingQuickCommands,
+                        onKeyPressed: { key in sendKeyToSession(key) }
+                    )
                 } else {
                     // 未连接状态 - 去掉了 Quick Connect
                     TerminalEmptyState(
@@ -77,6 +78,18 @@ struct TerminalView: View {
                 }
                 
                 if activeSession != nil {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                showingQuickCommands.toggle()
+                            }
+                        } label: {
+                            Image(systemName: showingQuickCommands ? "keyboard.chevron.compact.down" : "command")
+                                .foregroundStyle(AppColors.accent)
+                        }
+                        .accessibilityIdentifier("terminal.quickCommands")
+                    }
+
                     ToolbarItem(placement: .cancellationAction) {
                         Button(String(localized: "Disconnect")) {
                             disconnect()
@@ -100,9 +113,11 @@ struct TerminalView: View {
         
         Task {
             await session.connect()
-            // 连接成功后，重建输入框以触发键盘
             await MainActor.run {
-                inputFieldId = UUID()
+                if session.state == .connected {
+                    // 连接成功后，重建输入框以触发键盘
+                    inputFieldId = UUID()
+                }
             }
         }
         
@@ -144,7 +159,8 @@ struct CommandInputBarUIKit: UIViewRepresentable {
     let prompt: String
     @Binding var text: String
     let id: UUID
-    let onSubmit: () -> Void
+    let isEnabled: Bool
+    let onSubmit: (String) -> Void
     
     func makeUIView(context: Context) -> UIView {
         let container = UIView()
@@ -163,6 +179,7 @@ struct CommandInputBarUIKit: UIViewRepresentable {
         textField.font = UIFont.monospacedSystemFont(ofSize: 14, weight: .regular)
         textField.textColor = UIColor(AppColors.primaryText)
         textField.placeholder = "输入命令..."
+        textField.accessibilityIdentifier = "terminal.commandInput"
         textField.autocorrectionType = .no
         textField.autocapitalizationType = .none
         textField.keyboardType = .asciiCapable
@@ -176,6 +193,7 @@ struct CommandInputBarUIKit: UIViewRepresentable {
         let sendButton = UIButton(type: .system)
         sendButton.setImage(UIImage(systemName: "arrow.up.circle.fill"), for: .normal)
         sendButton.tintColor = UIColor(AppColors.accent)
+        sendButton.accessibilityIdentifier = "terminal.sendCommand"
         sendButton.addTarget(context.coordinator, action: #selector(Coordinator.sendPressed), for: .touchUpInside)
         sendButton.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(sendButton)
@@ -186,6 +204,7 @@ struct CommandInputBarUIKit: UIViewRepresentable {
             promptLabel.centerYAnchor.constraint(equalTo: container.centerYAnchor),
             
             textField.leadingAnchor.constraint(equalTo: promptLabel.trailingAnchor, constant: 8),
+            textField.trailingAnchor.constraint(equalTo: sendButton.leadingAnchor, constant: -8),
             textField.centerYAnchor.constraint(equalTo: container.centerYAnchor),
             
             sendButton.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
@@ -202,19 +221,35 @@ struct CommandInputBarUIKit: UIViewRepresentable {
     }
     
     func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.onSubmit = onSubmit
+
         // 更新文本
         if let textField = uiView.viewWithTag(100) as? UITextField {
             if textField.text != text {
                 textField.text = text
             }
+
+            textField.isEnabled = isEnabled
+            textField.placeholder = isEnabled ? "输入命令..." : "等待连接..."
             
             // id 变化时强制获取焦点并弹出键盘
             if context.coordinator.currentId != id {
                 context.coordinator.currentId = id
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    textField.becomeFirstResponder()
+                    if isEnabled {
+                        textField.becomeFirstResponder()
+                    }
                 }
             }
+
+            if !isEnabled && textField.isFirstResponder {
+                textField.resignFirstResponder()
+            }
+        }
+
+        if let sendButton = uiView.subviews.compactMap({ $0 as? UIButton }).first {
+            sendButton.isEnabled = isEnabled
+            sendButton.alpha = isEnabled ? 1.0 : 0.35
         }
         
         // 更新提示符
@@ -231,12 +266,12 @@ struct CommandInputBarUIKit: UIViewRepresentable {
     
     class Coordinator: NSObject, UITextFieldDelegate {
         @Binding var text: String
-        let onSubmit: () -> Void
+        var onSubmit: (String) -> Void
         
         var textField: UITextField?
         var currentId: UUID?
         
-        init(text: Binding<String>, onSubmit: @escaping () -> Void) {
+        init(text: Binding<String>, onSubmit: @escaping (String) -> Void) {
             self._text = text
             self.onSubmit = onSubmit
         }
@@ -246,17 +281,29 @@ struct CommandInputBarUIKit: UIViewRepresentable {
         }
         
         func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-            onSubmit()
+            submit(textField)
             return true
         }
         
         @objc func sendPressed() {
-            onSubmit()
+            if let textField {
+                submit(textField)
+            }
         }
         
         // 允许始终编辑
         func textFieldShouldBeginEditing(_ textField: UITextField) -> Bool {
             return true
+        }
+
+        private func submit(_ textField: UITextField) {
+            let command = textField.text ?? ""
+            guard !command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+
+            onSubmit(command)
+            text = ""
+            textField.text = ""
+            textField.becomeFirstResponder()
         }
     }
 }
@@ -278,13 +325,38 @@ struct ConnectionStatusBar: View {
             
             Spacer()
             
-            Text(session.state == .connected ? "Connected" : "Connecting...")
+            Text(statusText)
                 .font(AppTypography.labelSmall)
-                .foregroundStyle(session.state == .connected ? AppColors.online : AppColors.warning)
+                .foregroundStyle(statusColor)
         }
         .padding(.horizontal, DesignSystem.Spacing.md)
         .padding(.vertical, DesignSystem.Spacing.sm)
         .background(AppColors.secondaryBackground.opacity(0.8))
+        .accessibilityIdentifier("terminal.connectionStatus")
+    }
+
+    private var statusText: String {
+        switch session.state {
+        case .connected:
+            return "Connected"
+        case .connecting:
+            return "Connecting..."
+        case .disconnected:
+            return "Disconnected"
+        case .error(let message):
+            return "Error: \(message)"
+        }
+    }
+
+    private var statusColor: Color {
+        switch session.state {
+        case .connected:
+            return AppColors.online
+        case .connecting:
+            return AppColors.warning
+        case .disconnected, .error:
+            return AppColors.offline
+        }
     }
 }
 
@@ -306,6 +378,7 @@ struct TerminalOutputView: View {
                     .id("output")
             }
             .background(AppColors.secondaryBackground)
+            .accessibilityIdentifier("terminal.output")
             .onChange(of: session.outputBuffer) { _, _ in
                 withAnimation(.easeInOut(duration: 0.1)) {
                     proxy.scrollTo("output", anchor: .bottom)
@@ -318,10 +391,27 @@ struct TerminalOutputView: View {
 // MARK: - 终端工具栏
 
 struct TerminalToolbarView: View {
+    @Binding var showingQuickCommands: Bool
     let onKeyPressed: (String) -> Void
     
     var body: some View {
         HStack(spacing: DesignSystem.Spacing.sm) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showingQuickCommands.toggle()
+                }
+            } label: {
+                Text("CMD")
+                    .font(AppTypography.labelSmall)
+                    .fontWeight(.medium)
+                    .foregroundStyle(showingQuickCommands ? AppColors.accent : AppColors.primaryText)
+                    .padding(.horizontal, DesignSystem.Spacing.sm)
+                    .padding(.vertical, DesignSystem.Spacing.xs)
+                    .background(AppColors.cardBackground)
+                    .cornerRadius(DesignSystem.Radius.sm)
+            }
+            .accessibilityIdentifier("terminal.quickCommandsToolbar")
+
             ToolbarKeyButton(title: "ESC") { onKeyPressed("\u{001B}") }
             ToolbarKeyButton(title: "TAB") { onKeyPressed("\t") }
             ToolbarKeyButton(icon: "arrow.up") { onKeyPressed("\u{001B}[A") }
@@ -365,6 +455,7 @@ struct ToolbarKeyButton: View {
             .background(AppColors.cardBackground)
             .cornerRadius(DesignSystem.Radius.sm)
         }
+        .accessibilityIdentifier(title.map { "terminal.key.\($0)" } ?? "terminal.key.icon")
     }
 }
 
@@ -440,6 +531,9 @@ struct QuickCmdGroup: View {
                     .background(AppColors.cardBackground)
                     .cornerRadius(4)
                 }
+                .accessibilityIdentifier("terminal.quickCommand.\(cmd)")
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(label)
             }
         }
     }
@@ -475,6 +569,7 @@ struct TerminalEmptyState: View {
                         .background(AppColors.primaryGradient)
                         .cornerRadius(DesignSystem.Radius.md)
                 }
+                .accessibilityIdentifier("terminal.selectServer")
             } else {
                 Text("Add servers first in Servers tab")
                     .font(AppTypography.bodySmall)
@@ -522,6 +617,7 @@ struct ServerPickerSheet: View {
                         }
                     }
                     .listRowBackground(AppColors.cardBackground)
+                    .accessibilityIdentifier("terminal.server.\(server.name)")
                 }
             }
             .listStyle(.plain)

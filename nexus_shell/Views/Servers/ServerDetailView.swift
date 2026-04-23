@@ -91,6 +91,7 @@ struct ServerDetailView: View {
                     Text(isEditing ? String(localized: "Save") : String(localized: "Edit Server"))
                         .fontWeight(isEditing ? .semibold : .regular)
                 }
+                .accessibilityIdentifier(isEditing ? "serverDetail.save" : "serverDetail.edit")
             }
             
             ToolbarItem(placement: .cancellationAction) {
@@ -663,6 +664,7 @@ struct EditableRow: View {
                 .font(AppTypography.bodySmall)
                 .foregroundStyle(AppColors.primaryText)
                 .multilineTextAlignment(.trailing)
+                .accessibilityIdentifier("serverDetail.edit.\(label)")
         }
     }
 }
@@ -693,6 +695,7 @@ struct ActionButtonsSection: View {
                 .background(AppColors.primaryGradient)
                 .cornerRadius(DesignSystem.Radius.md)
             }
+            .accessibilityIdentifier("serverDetail.connect")
 
             // 查看连接详情按钮
             Button {
@@ -709,6 +712,7 @@ struct ActionButtonsSection: View {
                 .background(AppColors.secondaryAccent.opacity(0.2))
                 .cornerRadius(DesignSystem.Radius.md)
             }
+            .accessibilityIdentifier("serverDetail.connectionDetails")
 
             // 测试连接按钮
             Button {
@@ -738,6 +742,7 @@ struct ActionButtonsSection: View {
                 .cornerRadius(DesignSystem.Radius.md)
             }
             .disabled(isTesting)
+            .accessibilityIdentifier("serverDetail.testConnection")
 
             // 测试结果信息
             if let result = testResult {
@@ -789,6 +794,7 @@ struct DeleteButtonSection: View {
                 .background(AppColors.offline.opacity(0.15))
                 .cornerRadius(DesignSystem.Radius.md)
             }
+            .accessibilityIdentifier("serverDetail.delete")
             
             // 提示文字
             Text("This will permanently remove the server and all associated credentials.")
@@ -806,6 +812,7 @@ struct TerminalSessionSheet: View {
     @ObservedObject var session: ServerSession
     @Environment(\.dismiss) private var dismiss
     @State private var commandInput: String = ""
+    @State private var inputFieldId: UUID = UUID()
     
     private var settings: AppSettings { AppSettings.shared }
     
@@ -824,13 +831,14 @@ struct TerminalSessionSheet: View {
                     
                     Spacer()
                     
-                    Text(session.state == .connected ? "Connected" : "Connecting...")
+                    Text(statusText)
                         .font(AppTypography.labelSmall)
-                        .foregroundStyle(session.state == .connected ? AppColors.online : AppColors.warning)
+                        .foregroundStyle(statusColor)
                 }
                 .padding(.horizontal, DesignSystem.Spacing.md)
                 .padding(.vertical, DesignSystem.Spacing.sm)
                 .background(AppColors.secondaryBackground.opacity(0.8))
+                .accessibilityIdentifier("terminalSheet.connectionStatus")
                 
                 // 终端输出
                 ScrollViewReader { proxy in
@@ -851,34 +859,13 @@ struct TerminalSessionSheet: View {
                     }
                 }
                 
-                // 命令输入
-                HStack(spacing: DesignSystem.Spacing.sm) {
-                    Text("$")
-                        .font(.system(size: 14, design: .monospaced))
-                        .foregroundStyle(AppColors.accent)
-                    
-                    TextField("输入命令...", text: $commandInput)
-                        .font(.system(size: 14, design: .monospaced))
-                        .foregroundStyle(AppColors.primaryText)
-                        .autocorrectionDisabled()
-                        .autocapitalization(.none)
-                        .submitLabel(.go)
-                        .onSubmit {
-                            sendCommand()
-                        }
-                    
-                    Button {
-                        sendCommand()
-                    } label: {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.system(size: 22))
-                            .foregroundStyle(commandInput.isEmpty ? AppColors.disabledText : AppColors.accent)
-                    }
-                    .disabled(commandInput.isEmpty)
-                }
-                .padding(.horizontal, DesignSystem.Spacing.md)
-                .padding(.vertical, DesignSystem.Spacing.sm)
-                .background(AppColors.cardBackground)
+                CommandInputBarUIKit(
+                    prompt: "\(session.server.username)@\(session.server.host):~$",
+                    text: $commandInput,
+                    id: inputFieldId,
+                    isEnabled: session.state == .connected,
+                    onSubmit: sendCommand
+                )
                 
                 // 工具栏
                 HStack(spacing: DesignSystem.Spacing.sm) {
@@ -923,15 +910,49 @@ struct TerminalSessionSheet: View {
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
+        .onAppear {
+            if session.state == .connected {
+                inputFieldId = UUID()
+            }
+        }
+        .onChange(of: session.state) { _, newState in
+            if newState == .connected {
+                inputFieldId = UUID()
+            }
+        }
     }
     
-    private func sendCommand() {
-        guard !commandInput.isEmpty else { return }
-        session.sendCommand(commandInput)
+    private func sendCommand(_ command: String) {
+        guard !command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        session.sendCommand(command)
         commandInput = ""
         
         if settings.hapticFeedbackEnabled {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        }
+    }
+
+    private var statusText: String {
+        switch session.state {
+        case .connected:
+            return "Connected"
+        case .connecting:
+            return "Connecting..."
+        case .disconnected:
+            return "Disconnected"
+        case .error(let message):
+            return "Error: \(message)"
+        }
+    }
+
+    private var statusColor: Color {
+        switch session.state {
+        case .connected:
+            return AppColors.online
+        case .connecting:
+            return AppColors.warning
+        case .disconnected, .error:
+            return AppColors.offline
         }
     }
 }

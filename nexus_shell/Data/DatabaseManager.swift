@@ -169,6 +169,15 @@ class DatabaseManager {
         let sql = "DELETE FROM logs;"
         return execute(sql)
     }
+
+    /// 清空所有业务数据。主要用于自动化测试或显式的数据重置流程。
+    func resetAllData() {
+        beginTransaction()
+        _ = execute("DELETE FROM logs;")
+        _ = execute("DELETE FROM servers;")
+        _ = execute("DELETE FROM folders;")
+        commitTransaction()
+    }
     
     /// 清理指定服务器的日志
     func clearLogsForServer(_ serverId: UUID) -> Int {

@@ -21,6 +21,7 @@ struct ServersView: View {
     @State private var showingFolderNotEmptyAlert = false
     @State private var sortOrder: SortOrder = .name
     @State private var showingFolderPicker = false
+    @State private var serverToMove: Server?
     
     private var settings: AppSettings {
         AppSettings.shared
@@ -118,6 +119,7 @@ struct ServersView: View {
                             .font(.system(size: 20))
                             .foregroundStyle(AppColors.accent)
                     }
+                    .accessibilityIdentifier("servers.addMenu")
                 }
                 
                 ToolbarItem(placement: .secondaryAction) {
@@ -155,6 +157,7 @@ struct ServersView: View {
                         Image(systemName: "ellipsis.circle")
                             .foregroundStyle(AppColors.secondaryText)
                     }
+                    .accessibilityIdentifier("servers.optionsMenu")
                 }
             }
             .sheet(isPresented: $showingAddServer) {
@@ -166,6 +169,21 @@ struct ServersView: View {
                 AddFolderView()
                     .presentationDetents([.medium])
                     .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showingFolderPicker) {
+                if let server = serverToMove {
+                    MoveServerSheet(
+                        server: server,
+                        folders: folderStore.folders,
+                        onMove: { folderId in
+                            serverStore.updateServerFolder(server.id, folderId: folderId)
+                            serverToMove = nil
+                            showingFolderPicker = false
+                        }
+                    )
+                    .presentationDetents([.medium])
+                    .presentationDragIndicator(.visible)
+                }
             }
             .confirmationDialog(
                 "Delete Server?",
@@ -281,10 +299,12 @@ struct ServersView: View {
                                 }
                                 
                                 Button {
+                                    serverToMove = server
                                     showingFolderPicker = true
                                 } label: {
                                     Label("Move", systemImage: "folder")
                                 }
+                                .accessibilityIdentifier("serverRow.move.\(server.name)")
                             }
                     }
                 }
@@ -427,6 +447,8 @@ struct FolderRowView: View {
         .listRowBackground(AppColors.cardBackground)
         .listRowInsets(EdgeInsets(top: DesignSystem.Spacing.sm, leading: DesignSystem.Spacing.md, bottom: DesignSystem.Spacing.sm, trailing: DesignSystem.Spacing.md))
         .listRowSeparator(.hidden)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("folderRow.\(folder.name)")
     }
 }
 
@@ -503,6 +525,8 @@ struct ServerRowView: View {
         .listRowBackground(AppColors.cardBackground)
         .listRowInsets(EdgeInsets(top: DesignSystem.Spacing.sm, leading: DesignSystem.Spacing.md, bottom: DesignSystem.Spacing.sm, trailing: DesignSystem.Spacing.md))
         .listRowSeparator(.hidden)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("serverRow.\(server.name)")
     }
     
     private var statusColor: Color {
@@ -583,6 +607,7 @@ struct EmptyServersView: View {
                     .background(AppColors.secondaryAccent.opacity(0.2))
                     .cornerRadius(DesignSystem.Radius.md)
                 }
+                .accessibilityIdentifier("servers.empty.createFolder")
                 
                 Button {
                     onAddServer()
@@ -598,6 +623,7 @@ struct EmptyServersView: View {
                     .background(AppColors.primaryGradient)
                     .cornerRadius(DesignSystem.Radius.md)
                 }
+                .accessibilityIdentifier("servers.empty.addServer")
             }
             .padding(.horizontal, DesignSystem.Spacing.xl)
         }
@@ -632,12 +658,82 @@ struct NoServersInFolderView: View {
                 .font(AppTypography.label)
                 .foregroundStyle(AppColors.accent)
             }
+            .accessibilityIdentifier("servers.folder.addServer")
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, DesignSystem.Spacing.xl)
         .listRowBackground(Color.clear)
         .listRowInsets(EdgeInsets())
         .listRowSeparator(.hidden)
+    }
+}
+
+// MARK: - Move Server Sheet
+
+struct MoveServerSheet: View {
+    let server: Server
+    let folders: [ServerFolder]
+    let onMove: (UUID?) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Button {
+                    onMove(nil)
+                    dismiss()
+                } label: {
+                    moveRow(title: String(localized: "Root"), icon: "tray", isSelected: server.folderId == nil)
+                }
+                .accessibilityIdentifier("moveServer.root")
+
+                ForEach(folders) { folder in
+                    Button {
+                        onMove(folder.id)
+                        dismiss()
+                    } label: {
+                        moveRow(
+                            title: folder.name,
+                            icon: folder.icon.systemName,
+                            isSelected: server.folderId == folder.id
+                        )
+                    }
+                    .disabled(server.folderId == folder.id)
+                    .accessibilityIdentifier("moveServer.folder.\(folder.name)")
+                }
+            }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .background(AppColors.background)
+            .navigationTitle("Move Server")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+
+    private func moveRow(title: String, icon: String, isSelected: Bool) -> some View {
+        HStack(spacing: DesignSystem.Spacing.md) {
+            Image(systemName: icon)
+                .foregroundStyle(isSelected ? AppColors.accent : AppColors.secondaryText)
+
+            Text(title)
+                .foregroundStyle(AppColors.primaryText)
+
+            Spacer()
+
+            if isSelected {
+                Image(systemName: "checkmark")
+                    .foregroundStyle(AppColors.accent)
+            }
+        }
+        .padding(.vertical, DesignSystem.Spacing.sm)
     }
 }
 

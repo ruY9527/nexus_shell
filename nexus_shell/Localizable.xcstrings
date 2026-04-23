@@ -29,9 +29,6 @@
     "%lld%%" : {
 
     },
-    "$" : {
-
-    },
     "0 servers" : {
 
     },
@@ -204,6 +201,9 @@
     "CLR" : {
 
     },
+    "CMD" : {
+
+    },
     "Color" : {
 
     },
@@ -225,9 +225,6 @@
       }
     },
     "Connect to servers to view activity logs" : {
-
-    },
-    "Connected" : {
 
     },
     "Connecting..." : {
@@ -606,6 +603,9 @@
 
     },
     "Move" : {
+
+    },
+    "Move Server" : {
 
     },
     "Name" : {
@@ -1068,9 +1068,6 @@
 
     },
     "中文" : {
-
-    },
-    "输入命令..." : {
 
     }
   },
