@@ -24,6 +24,31 @@ final class AppSettings {
         static let terminalFontSize = "terminalFontSize"
         static let colorScheme = "colorScheme"
         static let language = "language"
+        static let sshMode = "sshMode"
+        static let defaultSSHConfig = "defaultSSHConfig"
+    }
+
+    /// SSH 连接模式
+    enum SSHModes: String, CaseIterable, Codable {
+        case real = "real"
+        case simulated = "simulated"
+        case auto = "auto"
+
+        var displayName: String {
+            switch self {
+            case .real: return "Real SSH"
+            case .simulated: return "Simulated"
+            case .auto: return "Auto (fallback)"
+            }
+        }
+
+        var description: String {
+            switch self {
+            case .real: return "Use real SSH connection"
+            case .simulated: return "Use simulated commands"
+            case .auto: return "Use real SSH, fallback to simulated on failure"
+            }
+        }
     }
 
     private let defaults = UserDefaults.standard
@@ -98,6 +123,38 @@ final class AppSettings {
         }
     }
 
+    /// SSH 连接模式
+    var sshMode: SSHModes {
+        get {
+            guard let value = defaults.string(forKey: Keys.sshMode),
+                  let mode = SSHModes(rawValue: value) else {
+                return .auto
+            }
+            return mode
+        }
+        set {
+            defaults.set(newValue.rawValue, forKey: Keys.sshMode)
+            notifyChange()
+        }
+    }
+
+    /// 默认 SSH 配置（JSON 编码的 SSHConfig）
+    var defaultSSHConfig: SSHConfig {
+        get {
+            guard let data = defaults.data(forKey: Keys.defaultSSHConfig),
+                  let config = try? JSONDecoder().decode(SSHConfig.self, from: data) else {
+                return .default
+            }
+            return config
+        }
+        set {
+            if let data = try? JSONEncoder().encode(newValue) {
+                defaults.set(data, forKey: Keys.defaultSSHConfig)
+            }
+            notifyChange()
+        }
+    }
+
     // MARK: - Initialization
 
     private init() {
@@ -120,6 +177,9 @@ final class AppSettings {
         if defaults.object(forKey: Keys.language) == nil {
             defaults.set("system", forKey: Keys.language)
         }
+        if defaults.object(forKey: Keys.sshMode) == nil {
+            defaults.set(SSHModes.auto.rawValue, forKey: Keys.sshMode)
+        }
     }
 
     private func notifyChange() {
@@ -137,6 +197,8 @@ final class AppSettings {
         defaults.set(14, forKey: Keys.terminalFontSize)
         defaults.set("dark", forKey: Keys.colorScheme)
         defaults.set("system", forKey: Keys.language)
+        defaults.set(SSHModes.auto.rawValue, forKey: Keys.sshMode)
+        defaults.removeObject(forKey: Keys.defaultSSHConfig)
 
         notifyChange()
 
@@ -161,6 +223,8 @@ class SettingsObserver: ObservableObject {
     @Published var terminalFontSize: Int
     @Published var colorSchemeString: String
     @Published var language: String
+    @Published var sshMode: AppSettings.SSHModes
+    @Published var defaultSSHConfig: SSHConfig
 
     private init() {
         colorScheme = AppSettings.shared.preferredColorScheme
@@ -170,8 +234,9 @@ class SettingsObserver: ObservableObject {
         terminalFontSize = AppSettings.shared.terminalFontSize
         colorSchemeString = AppSettings.shared.colorSchemeString
         language = AppSettings.shared.language
+        sshMode = AppSettings.shared.sshMode
+        defaultSSHConfig = AppSettings.shared.defaultSSHConfig
 
-        // 监听设置变化
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(settingsDidChange),
@@ -189,11 +254,17 @@ class SettingsObserver: ObservableObject {
             self.terminalFontSize = AppSettings.shared.terminalFontSize
             self.colorSchemeString = AppSettings.shared.colorSchemeString
             self.language = AppSettings.shared.language
+            self.sshMode = AppSettings.shared.sshMode
+            self.defaultSSHConfig = AppSettings.shared.defaultSSHConfig
         }
     }
 
     func setColorScheme(_ value: String) {
         AppSettings.shared.colorSchemeString = value
+    }
+
+    func updateSSHConfig(_ config: SSHConfig) {
+        AppSettings.shared.defaultSSHConfig = config
     }
 }
 

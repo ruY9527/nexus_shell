@@ -16,33 +16,55 @@ final class nexus_shellUITests: XCTestCase {
     }
 
     func testMainTabsSettingsLogsAndTerminalSession() throws {
-        app = launchApp(seedData: true)
+        app = launchApp()
 
+        // Create test data via UI
+        app.element("tab.servers").tap()
+        XCTAssertTrue(app.staticTexts["No Servers Yet"].waitForExistence(timeout: 10))
+
+        // Create a folder
+        app.buttons["servers.empty.createFolder"].tap()
+        let folderName = app.textFields["addFolder.name"]
+        XCTAssertTrue(folderName.waitForExistence(timeout: 10))
+        folderName.typeText("Test Folder")
+        app.buttons["addFolder.create"].tap()
+        XCTAssertTrue(app.element("folderRow.Test Folder").waitForExistence(timeout: 10))
+
+        // Create a server at root level via toolbar menu
+        app.element("servers.addMenu").tap()
+        app.buttons["New Server"].tap()
+        XCTAssertTrue(app.staticTexts["Add Server"].waitForExistence(timeout: 10))
+        app.textFields["addServer.name"].tap()
+        app.textFields["addServer.name"].typeText("Test Server")
+        app.textFields["addServer.host"].tap()
+        app.textFields["addServer.host"].typeText("10.0.0.1")
+        app.textFields["addServer.username"].tap()
+        app.textFields["addServer.username"].typeText("testuser")
+        app.secureTextFields["addServer.password"].tap()
+        app.secureTextFields["addServer.password"].typeText("testpass")
+        app.buttons["addServer.save"].tap()
+        app.alerts["Save Server?"].buttons["Save"].tap()
+        XCTAssertTrue(app.element("serverRow.Test Server").waitForExistence(timeout: 10))
+
+        // Test Dashboard tab
+        app.element("tab.dashboard").tap()
         XCTAssertTrue(app.staticTexts["Dashboard"].waitForExistence(timeout: 10))
 
-        app.element("tab.servers").tap()
-        XCTAssertTrue(app.staticTexts["Servers"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.element("folderRow.Company A").waitForExistence(timeout: 10))
-        XCTAssertTrue(app.element("serverRow.Public Server").waitForExistence(timeout: 10))
-
-        app.element("folderRow.Company A").tap()
-        XCTAssertTrue(app.staticTexts["Company A"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.element("serverRow.Dev Server").waitForExistence(timeout: 10))
-        app.buttons["Back"].tap()
-
+        // Test Logs tab
         app.element("tab.logs").tap()
         XCTAssertTrue(app.staticTexts["Logs"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.staticTexts["Sample log for Public Server"].waitForExistence(timeout: 10))
 
+        // Test Settings tab
         app.element("tab.settings").tap()
         XCTAssertTrue(app.staticTexts["Settings"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["Terminal Font Size"].exists)
         app.buttons["Done"].tap()
 
+        // Test Terminal session
         app.element("tab.terminal").tap()
         XCTAssertTrue(app.staticTexts["No Active Session"].waitForExistence(timeout: 10))
         app.buttons["terminal.selectServer"].tap()
-        app.element("terminal.server.Public Server").tap()
+        app.element("terminal.server.Test Server").tap()
 
         XCTAssertTrue(app.staticTexts["Connected"].waitForExistence(timeout: 8))
         let commandInput = app.textFields["terminal.commandInput"]
@@ -68,7 +90,7 @@ final class nexus_shellUITests: XCTestCase {
     }
 
     func testCreateMoveAndDeleteServerFlow() throws {
-        app = launchApp(seedData: false)
+        app = launchApp()
 
         app.element("tab.servers").tap()
         XCTAssertTrue(app.staticTexts["No Servers Yet"].waitForExistence(timeout: 10))
@@ -123,7 +145,7 @@ final class nexus_shellUITests: XCTestCase {
         XCTAssertFalse(app.element("folderRow.QA Folder").waitForExistence(timeout: 3))
     }
 
-    private func launchApp(seedData: Bool) -> XCUIApplication {
+    private func launchApp() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [
             "--ui-testing",
@@ -134,12 +156,6 @@ final class nexus_shellUITests: XCTestCase {
             "-AppleLocale",
             "en_US"
         ]
-
-        if seedData {
-            app.launchArguments.append("--ui-testing-seed-data")
-        } else {
-            app.launchArguments.append("--ui-testing-disable-sample-data")
-        }
 
         app.launch()
         return app

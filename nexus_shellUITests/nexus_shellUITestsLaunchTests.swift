@@ -23,7 +23,6 @@ final class nexus_shellUITestsLaunchTests: XCTestCase {
         app.launchArguments = [
             "--ui-testing",
             "--ui-testing-reset-data",
-            "--ui-testing-seed-data",
             "--ui-testing-simulated-network",
             "-AppleLanguages",
             "(en)",

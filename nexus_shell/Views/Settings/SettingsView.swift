@@ -57,6 +57,94 @@ struct SettingsView: View {
                         .foregroundStyle(AppColors.secondaryText)
                 }
 
+                // SSH 连接设置
+                Section {
+                    Picker("SSH Mode", selection: $settings.sshMode) {
+                        ForEach(AppSettings.SSHModes.allCases, id: \.self) { mode in
+                            VStack(alignment: .leading) {
+                                Text(mode.displayName)
+                                Text(mode.description)
+                                    .font(AppTypography.labelSmall)
+                                    .foregroundStyle(AppColors.secondaryText)
+                            }
+                            .tag(mode)
+                        }
+                    }
+                    .onChange(of: settings.sshMode) { _, newValue in
+                        AppSettings.shared.sshMode = newValue
+                    }
+
+                    HStack {
+                        VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                            Text("Connection Timeout")
+                                .foregroundStyle(AppColors.primaryText)
+                            Text("Timeout for establishing SSH connection")
+                                .font(AppTypography.bodySmall)
+                                .foregroundStyle(AppColors.secondaryText)
+                        }
+                        Spacer()
+                        Text("\(Int(settings.defaultSSHConfig.connectionTimeout))s")
+                            .foregroundStyle(AppColors.secondaryText)
+                        Stepper("", value: Binding(
+                            get: { Int(settings.defaultSSHConfig.connectionTimeout) },
+                            set: { newValue in
+                                var config = settings.defaultSSHConfig
+                                config.connectionTimeout = TimeInterval(newValue)
+                                settings.updateSSHConfig(config)
+                            }
+                        ), in: 5...60)
+                            .labelsHidden()
+                    }
+
+                    HStack {
+                        VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                            Text("Auto Reconnect")
+                                .foregroundStyle(AppColors.primaryText)
+                            Text("Automatically reconnect on connection loss")
+                                .font(AppTypography.bodySmall)
+                                .foregroundStyle(AppColors.secondaryText)
+                        }
+                        Spacer()
+                        Toggle("", isOn: Binding(
+                            get: { settings.defaultSSHConfig.autoReconnect },
+                            set: { newValue in
+                                var config = settings.defaultSSHConfig
+                                config.autoReconnect = newValue
+                                settings.updateSSHConfig(config)
+                            }
+                        ))
+                        .labelsHidden()
+                        .tint(AppColors.accent)
+                    }
+
+                    if settings.defaultSSHConfig.autoReconnect {
+                        HStack {
+                            Text("Max Reconnect Attempts")
+                                .foregroundStyle(AppColors.primaryText)
+                            Spacer()
+                            Text("\(settings.defaultSSHConfig.maxReconnectAttempts)")
+                                .foregroundStyle(AppColors.secondaryText)
+                            Stepper("", value: Binding(
+                                get: { settings.defaultSSHConfig.maxReconnectAttempts },
+                                set: { newValue in
+                                    var config = settings.defaultSSHConfig
+                                    config.maxReconnectAttempts = newValue
+                                    settings.updateSSHConfig(config)
+                                }
+                            ), in: 1...10)
+                                .labelsHidden()
+                        }
+                    }
+                } header: {
+                    Text("SSH Connection")
+                        .font(AppTypography.labelSmall)
+                        .foregroundStyle(AppColors.secondaryText)
+                } footer: {
+                    Text("Auto mode tries real SSH first, falls back to simulated commands on failure.")
+                        .font(AppTypography.bodySmall)
+                        .foregroundStyle(AppColors.secondaryText)
+                }
+
                 // 交互设置
                 Section {
                     HStack {

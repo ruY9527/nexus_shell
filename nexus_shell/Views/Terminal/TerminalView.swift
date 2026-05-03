@@ -14,6 +14,7 @@ struct TerminalView: View {
     @State private var showingServerPicker = false
     @State private var commandInput: String = ""
     @State private var showingQuickCommands = false
+    @State private var showingFileBrowser = false
     @State private var inputFieldId: UUID = UUID()  // 用于重建输入框
 
     private var settings: AppSettings { AppSettings.shared }
@@ -79,15 +80,29 @@ struct TerminalView: View {
                 
                 if activeSession != nil {
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                showingQuickCommands.toggle()
+                        HStack(spacing: DesignSystem.Spacing.sm) {
+                            #if canImport(NMSSH)
+                            if activeSession?.connectionMode == .real {
+                                Button {
+                                    showingFileBrowser = true
+                                } label: {
+                                    Image(systemName: "folder")
+                                        .foregroundStyle(AppColors.accent)
+                                }
+                                .accessibilityIdentifier("terminal.fileBrowser")
                             }
-                        } label: {
-                            Image(systemName: showingQuickCommands ? "keyboard.chevron.compact.down" : "command")
-                                .foregroundStyle(AppColors.accent)
+                            #endif
+
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    showingQuickCommands.toggle()
+                                }
+                            } label: {
+                                Image(systemName: showingQuickCommands ? "keyboard.chevron.compact.down" : "command")
+                                    .foregroundStyle(AppColors.accent)
+                            }
+                            .accessibilityIdentifier("terminal.quickCommands")
                         }
-                        .accessibilityIdentifier("terminal.quickCommands")
                     }
 
                     ToolbarItem(placement: .cancellationAction) {
@@ -101,6 +116,13 @@ struct TerminalView: View {
             .sheet(isPresented: $showingServerPicker) {
                 ServerPickerSheet(servers: serverStore.allServers, onSelect: connectToServer)
             }
+            #if canImport(NMSSH)
+            .sheet(isPresented: $showingFileBrowser) {
+                if let session = activeSession, let connection = session.realSSHConnection {
+                    FileBrowserView(sshConnection: connection)
+                }
+            }
+            #endif
         }
         .background(AppColors.background)
     }
@@ -312,25 +334,35 @@ struct CommandInputBarUIKit: UIViewRepresentable {
 
 struct ConnectionStatusBar: View {
     @ObservedObject var session: ServerSession
-    
+
     var body: some View {
-        HStack(spacing: DesignSystem.Spacing.sm) {
-            Circle()
-                .fill(session.state == .connected ? AppColors.online : AppColors.offline)
-                .frame(width: 8, height: 8)
-            
-            Text("\(session.server.username)@\(session.server.host)")
-                .font(AppTypography.labelSmall)
-                .foregroundStyle(AppColors.secondaryText)
-            
-            Spacer()
-            
-            Text(statusText)
-                .font(AppTypography.labelSmall)
-                .foregroundStyle(statusColor)
+        VStack(spacing: 0) {
+            HStack(spacing: DesignSystem.Spacing.sm) {
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 8, height: 8)
+
+                Text("\(session.server.username)@\(session.server.host)")
+                    .font(AppTypography.labelSmall)
+                    .foregroundStyle(AppColors.secondaryText)
+
+                Spacer()
+
+                if session.state == .connected {
+                    ConnectionModeIndicator(mode: session.connectionMode)
+                }
+
+                Text(statusText)
+                    .font(AppTypography.labelSmall)
+                    .foregroundStyle(statusColor)
+            }
+            .padding(.horizontal, DesignSystem.Spacing.md)
+            .padding(.vertical, DesignSystem.Spacing.sm)
+
+            if case .reconnecting(let attempt, let maxAttempts) = session.state {
+                ReconnectingProgressBar(attempt: attempt, maxAttempts: maxAttempts)
+            }
         }
-        .padding(.horizontal, DesignSystem.Spacing.md)
-        .padding(.vertical, DesignSystem.Spacing.sm)
         .background(AppColors.secondaryBackground.opacity(0.8))
         .accessibilityIdentifier("terminal.connectionStatus")
     }
@@ -343,6 +375,8 @@ struct ConnectionStatusBar: View {
             return "Connecting..."
         case .disconnected:
             return "Disconnected"
+        case .reconnecting(let attempt, let maxAttempts):
+            return "Reconnecting (\(attempt)/\(maxAttempts))..."
         case .error(let message):
             return "Error: \(message)"
         }
@@ -352,7 +386,7 @@ struct ConnectionStatusBar: View {
         switch session.state {
         case .connected:
             return AppColors.online
-        case .connecting:
+        case .connecting, .reconnecting:
             return AppColors.warning
         case .disconnected, .error:
             return AppColors.offline

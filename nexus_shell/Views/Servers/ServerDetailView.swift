@@ -31,7 +31,9 @@ struct ServerDetailView: View {
     @State private var showingConnectionDetail = false
     @State private var showingDeleteConfirmation = false
     @State private var showingTerminalSession = false
+    @State private var showingSSHConfig = false
     @State private var activeSession: ServerSession?
+    @State private var serverSSHConfig: SSHConfig = .default
 
     private var settings: AppSettings {
         AppSettings.shared
@@ -65,7 +67,8 @@ struct ServerDetailView: View {
                     testResult: connectionTestResult,
                     onConnect: { connectToServer() },
                     onTest: { testConnection() },
-                    onShowDetail: { showingConnectionDetail = true }
+                    onShowDetail: { showingConnectionDetail = true },
+                    onSSHConfig: { showingSSHConfig = true }
                 )
                 
                 // 删除按钮
@@ -112,6 +115,13 @@ struct ServerDetailView: View {
                 TerminalSessionSheet(session: session)
             }
         }
+        .sheet(isPresented: $showingSSHConfig) {
+            ServerSSHConfigSheet(config: $serverSSHConfig)
+        }
+        .onAppear {
+            loadEditingValues()
+            serverSSHConfig = AppSettings.shared.defaultSSHConfig
+        }
         .confirmationDialog(
             "Delete Server?",
             isPresented: $showingDeleteConfirmation,
@@ -123,9 +133,6 @@ struct ServerDetailView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Are you sure you want to delete \"\(server.name)\"? This action cannot be undone and all credentials will be removed.")
-        }
-        .onAppear {
-            loadEditingValues()
         }
     }
 
@@ -677,6 +684,7 @@ struct ActionButtonsSection: View {
     let onConnect: () -> Void
     let onTest: () -> Void
     let onShowDetail: () -> Void
+    let onSSHConfig: () -> Void
 
     var body: some View {
         VStack(spacing: DesignSystem.Spacing.sm) {
@@ -743,6 +751,23 @@ struct ActionButtonsSection: View {
             }
             .disabled(isTesting)
             .accessibilityIdentifier("serverDetail.testConnection")
+
+            // SSH 连接配置按钮
+            Button {
+                onSSHConfig()
+            } label: {
+                HStack {
+                    Image(systemName: "gearshape")
+                    Text("Connection Settings")
+                }
+                .font(AppTypography.label)
+                .foregroundStyle(AppColors.secondaryText)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, DesignSystem.Spacing.md)
+                .background(AppColors.secondaryText.opacity(0.1))
+                .cornerRadius(DesignSystem.Radius.md)
+            }
+            .accessibilityIdentifier("serverDetail.sshConfig")
 
             // 测试结果信息
             if let result = testResult {
@@ -940,6 +965,8 @@ struct TerminalSessionSheet: View {
             return "Connecting..."
         case .disconnected:
             return "Disconnected"
+        case .reconnecting(let attempt, let maxAttempts):
+            return "Reconnecting (\(attempt)/\(maxAttempts))..."
         case .error(let message):
             return "Error: \(message)"
         }
@@ -949,11 +976,134 @@ struct TerminalSessionSheet: View {
         switch session.state {
         case .connected:
             return AppColors.online
-        case .connecting:
+        case .connecting, .reconnecting:
             return AppColors.warning
         case .disconnected, .error:
             return AppColors.offline
         }
+    }
+}
+
+// MARK: - Server SSH Config Sheet
+
+struct ServerSSHConfigSheet: View {
+    @Binding var config: SSHConfig
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    HStack {
+                        Text("Connection Timeout")
+                            .foregroundStyle(AppColors.primaryText)
+                        Spacer()
+                        Text("\(Int(config.connectionTimeout))s")
+                            .foregroundStyle(AppColors.secondaryText)
+                        Stepper("", value: Binding(
+                            get: { Int(config.connectionTimeout) },
+                            set: { config.connectionTimeout = TimeInterval($0) }
+                        ), in: 5...60)
+                        .labelsHidden()
+                    }
+
+                    HStack {
+                        Text("Command Timeout")
+                            .foregroundStyle(AppColors.primaryText)
+                        Spacer()
+                        Text("\(Int(config.commandTimeout))s")
+                            .foregroundStyle(AppColors.secondaryText)
+                        Stepper("", value: Binding(
+                            get: { Int(config.commandTimeout) },
+                            set: { config.commandTimeout = TimeInterval($0) }
+                        ), in: 10...120)
+                        .labelsHidden()
+                    }
+                } header: {
+                    Text("Timeouts")
+                        .font(AppTypography.labelSmall)
+                        .foregroundStyle(AppColors.secondaryText)
+                }
+
+                Section {
+                    Toggle("Auto Reconnect", isOn: $config.autoReconnect)
+                        .tint(AppColors.accent)
+
+                    if config.autoReconnect {
+                        HStack {
+                            Text("Max Attempts")
+                                .foregroundStyle(AppColors.primaryText)
+                            Spacer()
+                            Text("\(config.maxReconnectAttempts)")
+                                .foregroundStyle(AppColors.secondaryText)
+                            Stepper("", value: $config.maxReconnectAttempts, in: 1...10)
+                                .labelsHidden()
+                        }
+
+                        HStack {
+                            Text("Reconnect Delay")
+                                .foregroundStyle(AppColors.primaryText)
+                            Spacer()
+                            Text(String(format: "%.1fs", config.reconnectDelay))
+                                .foregroundStyle(AppColors.secondaryText)
+                            Stepper("", value: Binding(
+                                get: { config.reconnectDelay },
+                                set: { config.reconnectDelay = $0 }
+                            ), in: 1...30, step: 0.5)
+                            .labelsHidden()
+                        }
+                    }
+                } header: {
+                    Text("Reconnection")
+                        .font(AppTypography.labelSmall)
+                        .foregroundStyle(AppColors.secondaryText)
+                }
+
+                Section {
+                    HStack {
+                        Text("Keep-Alive Interval")
+                            .foregroundStyle(AppColors.primaryText)
+                        Spacer()
+                        Text("\(Int(config.keepAliveInterval))s")
+                            .foregroundStyle(AppColors.secondaryText)
+                        Stepper("", value: Binding(
+                            get: { Int(config.keepAliveInterval) },
+                            set: { config.keepAliveInterval = TimeInterval($0) }
+                        ), in: 10...300, step: 10)
+                        .labelsHidden()
+                    }
+
+                    Picker("Terminal Type", selection: $config.terminalType) {
+                        ForEach(TerminalType.allCases, id: \.self) { type in
+                            Text(type.rawValue).tag(type)
+                        }
+                    }
+                } header: {
+                    Text("Terminal")
+                        .font(AppTypography.labelSmall)
+                        .foregroundStyle(AppColors.secondaryText)
+                }
+
+                Section {
+                    Button("Reset to Defaults") {
+                        config = .default
+                    }
+                    .foregroundStyle(AppColors.accent)
+                }
+            }
+            .formStyle(.grouped)
+            .scrollContentBackground(.hidden)
+            .background(AppColors.background)
+            .navigationTitle("Connection Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
     }
 }
 

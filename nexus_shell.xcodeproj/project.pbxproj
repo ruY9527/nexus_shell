@@ -6,6 +6,9 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		AE65EC712F98713000D13575 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -32,16 +35,22 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		AE65EC652F98712A00D13575 /* nexus_shell */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = nexus_shell;
 			sourceTree = "<group>";
 		};
 		AE65EC732F98713000D13575 /* nexus_shellTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = nexus_shellTests;
 			sourceTree = "<group>";
 		};
 		AE65EC7D2F98713000D13575 /* nexus_shellUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = nexus_shellUITests;
 			sourceTree = "<group>";
 		};
@@ -111,8 +120,6 @@
 				AE65EC652F98712A00D13575 /* nexus_shell */,
 			);
 			name = nexus_shell;
-			packageProductDependencies = (
-			);
 			productName = nexus_shell;
 			productReference = AE65EC632F98712A00D13575 /* nexus_shell.app */;
 			productType = "com.apple.product-type.application";
@@ -134,8 +141,6 @@
 				AE65EC732F98713000D13575 /* nexus_shellTests */,
 			);
 			name = nexus_shellTests;
-			packageProductDependencies = (
-			);
 			productName = nexus_shellTests;
 			productReference = AE65EC702F98713000D13575 /* nexus_shellTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -157,8 +162,6 @@
 				AE65EC7D2F98713000D13575 /* nexus_shellUITests */,
 			);
 			name = nexus_shellUITests;
-			packageProductDependencies = (
-			);
 			productName = nexus_shellUITests;
 			productReference = AE65EC7A2F98713000D13575 /* nexus_shellUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
@@ -231,6 +234,9 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		AE65EC5F2F98712A00D13575 /* Sources */ = {

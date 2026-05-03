@@ -14,8 +14,9 @@ enum SessionState: Equatable {
     case disconnected
     case connecting
     case connected
+    case reconnecting(attempt: Int, maxAttempts: Int)
     case error(String)
-    
+
     static func == (lhs: SessionState, rhs: SessionState) -> Bool {
         switch (lhs, rhs) {
         case (.disconnected, .disconnected):
@@ -24,11 +25,33 @@ enum SessionState: Equatable {
             return true
         case (.connected, .connected):
             return true
+        case (.reconnecting(let l1, let m1), .reconnecting(let l2, let m2)):
+            return l1 == l2 && m1 == m2
         case (.error(let l), .error(let r)):
             return l == r
         default:
             return false
         }
+    }
+
+    var displayText: String {
+        switch self {
+        case .disconnected:
+            return "Disconnected"
+        case .connecting:
+            return "Connecting..."
+        case .connected:
+            return "Connected"
+        case .reconnecting(let attempt, let maxAttempts):
+            return "Reconnecting (\(attempt)/\(maxAttempts))..."
+        case .error(let message):
+            return "Error: \(message)"
+        }
+    }
+
+    var isConnected: Bool {
+        if case .connected = self { return true }
+        return false
     }
 }
 
@@ -36,35 +59,39 @@ enum SessionState: Equatable {
 /// 管理单个 SSH 连接的生命周期
 @MainActor
 class ServerSession: ObservableObject {
-    /// 关联的服务器
     let server: Server
-    
-    /// 会话状态
+
     @Published var state: SessionState = .disconnected
-    
-    /// 终端输出缓冲
     @Published var outputBuffer: String = ""
-    
-    /// 命令历史
     @Published var commandHistory: [String] = []
-    
-    /// 会话创建时间
+    @Published var connectionMode: SSHConnectionMode = .simulated
+
     let createdAt: Date
-    
-    /// SSH 连接
-    private var sshConnection: SSHConnection?
-    
-    /// 监控器
+
+    #if canImport(NMSSH)
+    private(set) var realSSHConnection: RealSSHConnection?
+    #endif
+    private var simulatedSSHConnection: SSHConnection?
+
     private let monitor = ServerMonitor()
-    
-    /// 是否正在监控
     @Published var isMonitoring: Bool = false
-    
+
+    private var sshConfig: SSHConfig
+    private var reconnectTask: Task<Void, Never>?
+    private var reconnectAttempts: Int = 0
+
+    enum SSHConnectionMode {
+        #if canImport(NMSSH)
+        case real
+        #endif
+        case simulated
+    }
+
     init(server: Server) {
         self.server = server
         self.createdAt = Date()
-        
-        // 初始化欢迎信息
+        self.sshConfig = AppSettings.shared.defaultSSHConfig
+
         outputBuffer = """
         ┌─────────────────────────────────────────┐
         │  Nexus Shell - SSH Terminal             │
@@ -73,13 +100,12 @@ class ServerSession: ObservableObject {
         └─────────────────────────────────────────┘
 
         """
-        
-        // 设置监控器回调
+
         Task {
             await monitor.setUpdateHandler { [weak self] update in
                 Task { @MainActor [weak self] in
                     guard let self, self.server.id == update.serverId else { return }
-                    
+
                     self.server.cpuUsage = update.cpuUsage
                     self.server.memoryUsage = update.memoryUsage
                     self.server.status = update.status
@@ -87,133 +113,281 @@ class ServerSession: ObservableObject {
             }
         }
     }
-    
-    /// 连接到服务器
+
+    // MARK: - Connection
+
     func connect() async {
         guard state != .connected && state != .connecting else { return }
-        
+
         state = .connecting
         appendOutput("Connecting to \(server.host)...\n")
-        
+
         do {
-            sshConnection = try await SSHClientManager.shared.createConnection(
+            let mode = AppSettings.shared.sshMode
+
+            if mode == .simulated {
+                try await connectSimulated()
+            } else {
+                try await connectWithFallback()
+            }
+        } catch {
+            state = .error(error.localizedDescription)
+            appendOutput("Connection failed: \(error.localizedDescription)\n")
+            server.status = .offline
+        }
+    }
+
+    private func connectSimulated() async throws {
+        simulatedSSHConnection = try await SSHClientManager.shared.createConnection(
+            host: server.host,
+            port: server.port,
+            username: server.username,
+            authMethod: server.authMethod,
+            serverId: server.id
+        )
+
+        await simulatedSSHConnection?.setOutputHandler { [weak self] output in
+            Task { @MainActor [weak self] in
+                self?.appendOutput(output)
+            }
+        }
+
+        state = .connected
+        connectionMode = .simulated
+        appendOutput("Connected (Simulated Mode).\n")
+
+        server.status = .online
+        server.lastConnectedAt = Date()
+        reconnectAttempts = 0
+        startMonitoring()
+    }
+
+    private func connectWithFallback() async throws {
+        do {
+            let mode = try await SSHClientManager.shared.createConnection(
                 host: server.host,
                 port: server.port,
                 username: server.username,
                 authMethod: server.authMethod,
-                serverId: server.id
+                serverId: server.id,
+                config: sshConfig
             )
-            
-            // 设置输出回调
-            await sshConnection?.setOutputHandler { [weak self] output in
-                Task { @MainActor [weak self] in
-                    self?.appendOutput(output)
-                }
+
+            switch mode {
+            #if canImport(NMSSH)
+            case .real(let connection):
+                realSSHConnection = connection
+                connectionMode = .real
+                await setupRealConnection()
+            #endif
+            case .simulated(let connection):
+                simulatedSSHConnection = connection
+                connectionMode = .simulated
+                await setupSimulatedConnection()
             }
-            
-            state = .connected
-            appendOutput("Connection established. Welcome!\n")
-            
-            // 更新服务器状态
-            server.status = .online
-            server.lastConnectedAt = Date()
-            
-            // 开始监控
-            startMonitoring()
-            
-            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            
         } catch {
-            state = .error(error.localizedDescription)
-            appendOutput("Error: \(error.localizedDescription)\n")
-            server.status = .offline
-            
-            UINotificationFeedbackGenerator().notificationOccurred(.error)
+            appendOutput("Real SSH connection failed, trying simulated mode...\n")
+            try await connectSimulated()
         }
     }
-    
-    /// 断开连接
+
+    #if canImport(NMSSH)
+    private func setupRealConnection() async {
+        guard let connection = realSSHConnection else { return }
+
+        await connection.setOutputHandler { [weak self] output in
+            Task { @MainActor [weak self] in
+                self?.appendOutput(output)
+            }
+        }
+
+        state = .connected
+        appendOutput("Connected (Real SSH).\n")
+
+        server.status = .online
+        server.lastConnectedAt = Date()
+        reconnectAttempts = 0
+        startMonitoring()
+    }
+    #endif
+
+    private func setupSimulatedConnection() async {
+        guard let connection = simulatedSSHConnection else { return }
+
+        await connection.setOutputHandler { [weak self] output in
+            Task { @MainActor [weak self] in
+                self?.appendOutput(output)
+            }
+        }
+
+        state = .connected
+        appendOutput("Connected (Simulated Mode).\n")
+
+        server.status = .online
+        server.lastConnectedAt = Date()
+        reconnectAttempts = 0
+        startMonitoring()
+    }
+
+    // MARK: - Disconnect
+
     func disconnect() {
-        guard sshConnection != nil else { return }
-        
+        guard state != .disconnected else { return }
+
         isMonitoring = false
-        
-        // 异步处理断开连接
+        reconnectTask?.cancel()
+        reconnectTask = nil
+
         Task {
             await monitor.stopMonitoring(server.id)
-            await sshConnection?.disconnect()
+            #if canImport(NMSSH)
+            await realSSHConnection?.disconnect()
+            #endif
+            await simulatedSSHConnection?.disconnect()
         }
-        
-        sshConnection = nil
-        
+
+        #if canImport(NMSSH)
+        realSSHConnection = nil
+        #endif
+        simulatedSSHConnection = nil
+
         state = .disconnected
         appendOutput("\nConnection closed.\n")
-        
+
         server.status = .unknown
-        
+
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
-    
-    /// 发送命令
+
+    // MARK: - Command Execution
+
     func sendCommand(_ command: String) {
-        guard state == .connected, let connection = sshConnection else {
+        guard state == .connected else {
             appendOutput("Error: Not connected to server.\n")
             return
         }
-        
-        // 添加到历史
+
         if !command.isEmpty && command != "\n" {
             commandHistory.append(command.trimmingCharacters(in: .newlines))
         }
-        
-        // 显示命令
+
         appendOutput("$ " + command.trimmingCharacters(in: .whitespacesAndNewlines) + "\n")
-        
+
         Task {
             do {
-                _ = try await connection.execute(command: command)
+                switch connectionMode {
+                #if canImport(NMSSH)
+                case .real:
+                    if let connection = realSSHConnection {
+                        _ = try await connection.execute(command: command)
+                    }
+                #endif
+                case .simulated:
+                    if let connection = simulatedSSHConnection {
+                        _ = try await connection.execute(command: command)
+                    }
+                }
             } catch {
                 appendOutput("Error: \(error.localizedDescription)\n")
+                await handleConnectionError(error)
             }
         }
-        
+
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
-    
-    /// 清空终端
+
+    // MARK: - Reconnection
+
+    private func handleConnectionError(_ error: Error) async {
+        guard sshConfig.autoReconnect, reconnectAttempts < sshConfig.maxReconnectAttempts else {
+            return
+        }
+
+        reconnectAttempts += 1
+        state = .reconnecting(attempt: reconnectAttempts, maxAttempts: sshConfig.maxReconnectAttempts)
+
+        appendOutput("Connection lost. Reconnecting (\(reconnectAttempts)/\(sshConfig.maxReconnectAttempts))...\n")
+
+        reconnectTask = Task {
+            do {
+                try await Task.sleep(for: .seconds(sshConfig.reconnectDelay))
+
+                guard !Task.isCancelled else { return }
+
+                await reconnect()
+            } catch {
+                // Reconnect cancelled or failed
+            }
+        }
+    }
+
+    private func reconnect() async {
+        do {
+            switch connectionMode {
+            #if canImport(NMSSH)
+            case .real:
+                if let connection = realSSHConnection {
+                    try await connection.reconnect()
+                    await setupRealConnection()
+                }
+            #endif
+            case .simulated:
+                if let connection = simulatedSSHConnection {
+                    try await connection.connect()
+                    await setupSimulatedConnection()
+                }
+            }
+        } catch {
+            state = .error("Reconnection failed: \(error.localizedDescription)")
+            server.status = .offline
+        }
+    }
+
+    // MARK: - Monitoring
+
+    private func startMonitoring() {
+        guard state == .connected else { return }
+
+        isMonitoring = true
+
+        Task {
+            switch connectionMode {
+            #if canImport(NMSSH)
+            case .real:
+                if let connection = realSSHConnection {
+                    await monitor.startMonitoring(serverId: server.id, realConnection: connection)
+                }
+            #endif
+            case .simulated:
+                if let connection = simulatedSSHConnection {
+                    await monitor.startMonitoring(serverId: server.id, simulatedConnection: connection)
+                }
+            }
+        }
+    }
+
+    // MARK: - Terminal
+
     func clearTerminal() {
         outputBuffer = ""
     }
-    
-    /// 开始监控服务器状态
-    private func startMonitoring() {
-        guard sshConnection != nil else { return }
-        
-        isMonitoring = true
-        
-        Task {
-            await monitor.startMonitoring(serverId: server.id, connection: sshConnection!)
-        }
-    }
-    
-    /// 追加输出
+
     private func appendOutput(_ text: String) {
         outputBuffer += text
-        
-        // 限制缓冲区大小，防止内存溢出
+
         if outputBuffer.count > 100000 {
             let startIndex = outputBuffer.index(outputBuffer.startIndex, offsetBy: 50000)
             outputBuffer = String(outputBuffer[startIndex...])
         }
     }
-    
-    /// 获取上一个命令（用于向上箭头）
+
+    // MARK: - Command History
+
     func getPreviousCommand() -> String? {
         if commandHistory.isEmpty { return nil }
         return commandHistory.last
     }
-    
-    /// 获取特定索引的历史命令
+
     func getCommand(at index: Int) -> String? {
         if index < 0 || index >= commandHistory.count { return nil }
         return commandHistory[commandHistory.count - 1 - index]

@@ -29,6 +29,12 @@
     "%lld%%" : {
 
     },
+    "%lldms" : {
+
+    },
+    "%llds" : {
+
+    },
     "0 servers" : {
 
     },
@@ -99,6 +105,16 @@
     "Are you sure you want to delete \"%@\"? This action cannot be undone." : {
 
     },
+    "Attempt %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Attempt %1$lld of %2$lld"
+          }
+        }
+      }
+    },
     "Authentication" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -116,10 +132,19 @@
         }
       }
     },
+    "Auto mode tries real SSH first, falls back to simulated commands on failure." : {
+
+    },
+    "Auto Reconnect" : {
+
+    },
     "Auto Refresh" : {
 
     },
     "Automatic Cleanup" : {
+
+    },
+    "Automatically reconnect on connection loss" : {
 
     },
     "Automatically refresh server status" : {
@@ -207,6 +232,9 @@
     "Color" : {
 
     },
+    "Command Timeout" : {
+
+    },
     "Connect" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -270,7 +298,13 @@
     "Connection Info" : {
 
     },
+    "Connection Settings" : {
+
+    },
     "Connection Test" : {
+
+    },
+    "Connection Timeout" : {
 
     },
     "CPU" : {
@@ -498,6 +532,9 @@
     "Interaction" : {
 
     },
+    "Keep-Alive Interval" : {
+
+    },
     "Language" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -577,6 +614,12 @@
 
     },
     "Max" : {
+
+    },
+    "Max Attempts" : {
+
+    },
+    "Max Reconnect Attempts" : {
 
     },
     "Mem" : {
@@ -784,6 +827,25 @@
     "Recent" : {
 
     },
+    "Reconnect Delay" : {
+
+    },
+    "Reconnecting (%lld/%lld)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Reconnecting (%1$lld/%2$lld)"
+          }
+        }
+      }
+    },
+    "Reconnecting..." : {
+
+    },
+    "Reconnection" : {
+
+    },
     "Refresh Interval" : {
 
     },
@@ -794,6 +856,9 @@
 
     },
     "Reset All Settings?" : {
+
+    },
+    "Reset to Defaults" : {
 
     },
     "Retention Policy" : {
@@ -911,6 +976,12 @@
     "Show More" : {
 
     },
+    "SSH Connection" : {
+
+    },
+    "SSH Mode" : {
+
+    },
     "Storage Info" : {
 
     },
@@ -986,6 +1057,9 @@
     "Terminal Font Size" : {
 
     },
+    "Terminal Type" : {
+
+    },
     "Test Connection" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1013,6 +1087,12 @@
 
     },
     "Timeline" : {
+
+    },
+    "Timeout for establishing SSH connection" : {
+
+    },
+    "Timeouts" : {
 
     },
     "Total" : {

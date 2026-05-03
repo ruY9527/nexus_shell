@@ -25,8 +25,58 @@ final class SSHClientManager {
     }
     
     // MARK: - Connection Test
-    
+
+    /// 测试连接（根据设置选择真实或模拟）
     static func testConnection(
+        host: String,
+        port: Int,
+        username: String,
+        authMethod: AuthMethod,
+        serverId: UUID
+    ) async -> ConnectionTestResult {
+        let mode = AppSettings.shared.sshMode
+
+        switch mode {
+        case .simulated:
+            return await testSimulatedConnection(
+                host: host, port: port, username: username,
+                authMethod: authMethod, serverId: serverId
+            )
+
+        #if canImport(NMSSH)
+        case .real:
+            return await testRealConnection(
+                host: host, port: port, username: username,
+                authMethod: authMethod, serverId: serverId
+            )
+
+        case .auto:
+            // 先尝试真实连接，失败后尝试模拟
+            var result = await testRealConnection(
+                host: host, port: port, username: username,
+                authMethod: authMethod, serverId: serverId
+            )
+
+            if case .failure = result {
+                result = await testSimulatedConnection(
+                    host: host, port: port, username: username,
+                    authMethod: authMethod, serverId: serverId
+                )
+            }
+
+            return result
+        #else
+        case .real, .auto:
+            return await testSimulatedConnection(
+                host: host, port: port, username: username,
+                authMethod: authMethod, serverId: serverId
+            )
+        #endif
+        }
+    }
+
+    /// 测试模拟连接
+    private static func testSimulatedConnection(
         host: String,
         port: Int,
         username: String,
@@ -37,7 +87,7 @@ final class SSHClientManager {
         if !reachable {
             return .failure("Network unreachable or connection refused")
         }
-        
+
         var credentials: String?
         switch authMethod {
         case .password:
@@ -49,11 +99,11 @@ final class SSHClientManager {
         if credentials == nil && usesSimulatedNetworkForUITests {
             credentials = "ui-test-credentials"
         }
-        
+
         guard credentials != nil else {
             return .failure("Authentication credentials not found")
         }
-        
+
         do {
             try await Task.sleep(for: .milliseconds(500))
             return .success
@@ -61,6 +111,56 @@ final class SSHClientManager {
             return .failure("Connection timeout")
         }
     }
+
+    #if canImport(NMSSH)
+    /// 测试真实 SSH 连接
+    private static func testRealConnection(
+        host: String,
+        port: Int,
+        username: String,
+        authMethod: AuthMethod,
+        serverId: UUID
+    ) async -> ConnectionTestResult {
+        let reachable = await testNetworkReachability(host: host, port: port)
+        if !reachable {
+            return .failure("Network unreachable or connection refused")
+        }
+
+        var authConfig: SSHAuthConfig
+
+        switch authMethod {
+        case .password:
+            guard let password = KeychainHelper.shared.getPassword(for: serverId) else {
+                return .failure("Password not found in Keychain")
+            }
+            authConfig = .password(username: username, password: password)
+
+        case .privateKey:
+            guard let privateKey = KeychainHelper.shared.getPrivateKey(for: serverId) else {
+                return .failure("Private key not found in Keychain")
+            }
+            let passphrase = KeychainHelper.shared.getPassphrase(for: serverId)
+            authConfig = .privateKey(username: username, privateKey: privateKey, passphrase: passphrase)
+        }
+
+        let config = AppSettings.shared.defaultSSHConfig
+        let connection = RealSSHConnection(
+            host: host,
+            port: port,
+            authConfig: authConfig,
+            serverId: serverId,
+            config: config
+        )
+
+        do {
+            try await connection.connect()
+            await connection.disconnect()
+            return .success
+        } catch {
+            return .failure(error.localizedDescription)
+        }
+    }
+    #endif
     
     static func testNetworkReachability(host: String, port: Int) async -> Bool {
         if usesSimulatedNetworkForUITests {
@@ -106,8 +206,73 @@ final class SSHClientManager {
     }
     
     // MARK: - SSH Connection
-    
+
+    enum ConnectionMode {
+        #if canImport(NMSSH)
+        case real(RealSSHConnection)
+        #endif
+        case simulated(SSHConnection)
+    }
+
+    /// 创建 SSH 连接（根据设置自动选择真实或模拟模式）
     func createConnection(
+        host: String,
+        port: Int,
+        username: String,
+        authMethod: AuthMethod,
+        serverId: UUID,
+        config: SSHConfig? = nil
+    ) async throws -> ConnectionMode {
+        let mode = AppSettings.shared.sshMode
+        let sshConfig = config ?? AppSettings.shared.defaultSSHConfig
+
+        switch mode {
+        case .simulated:
+            // 强制使用模拟模式
+            let connection = try await createSimulatedConnection(
+                host: host, port: port, username: username,
+                authMethod: authMethod, serverId: serverId
+            )
+            return .simulated(connection)
+
+        #if canImport(NMSSH)
+        case .real:
+            // 强制使用真实 SSH
+            let connection = try await createRealConnection(
+                host: host, port: port, username: username,
+                authMethod: authMethod, serverId: serverId, config: sshConfig
+            )
+            return .real(connection)
+
+        case .auto:
+            // 尝试真实 SSH，失败时 fallback 到模拟
+            do {
+                let connection = try await createRealConnection(
+                    host: host, port: port, username: username,
+                    authMethod: authMethod, serverId: serverId, config: sshConfig
+                )
+                return .real(connection)
+            } catch {
+                print("Real SSH connection failed, falling back to simulated mode: \(error.localizedDescription)")
+                let connection = try await createSimulatedConnection(
+                    host: host, port: port, username: username,
+                    authMethod: authMethod, serverId: serverId
+                )
+                return .simulated(connection)
+            }
+        #else
+        case .real, .auto:
+            let connection = try await createSimulatedConnection(
+                host: host, port: port, username: username,
+                authMethod: authMethod, serverId: serverId
+            )
+            return .simulated(connection)
+        #endif
+        }
+    }
+
+    /// 创建模拟连接
+    private func createSimulatedConnection(
         host: String,
         port: Int,
         username: String,
@@ -125,11 +290,11 @@ final class SSHClientManager {
         if credentials == nil && Self.usesSimulatedNetworkForUITests {
             credentials = "ui-test-credentials"
         }
-        
+
         guard let credentials else {
             throw SSHError.authenticationFailed("Credentials not found")
         }
-        
+
         let connection = SSHConnection(
             host: host,
             port: port,
@@ -138,9 +303,83 @@ final class SSHClientManager {
             credentials: credentials,
             serverId: serverId
         )
-        
+
         try await connection.connect()
         return connection
+    }
+
+    #if canImport(NMSSH)
+    /// 创建真实 SSH 连接
+    private func createRealConnection(
+        host: String,
+        port: Int,
+        username: String,
+        authMethod: AuthMethod,
+        serverId: UUID,
+        config: SSHConfig
+    ) async throws -> RealSSHConnection {
+        var authConfig: SSHAuthConfig
+
+        switch authMethod {
+        case .password:
+            guard let password = KeychainHelper.shared.getPassword(for: serverId) else {
+                throw SSHError.authenticationFailed("Password not found in Keychain")
+            }
+            authConfig = .password(username: username, password: password)
+
+        case .privateKey:
+            guard let privateKey = KeychainHelper.shared.getPrivateKey(for: serverId) else {
+                throw SSHError.authenticationFailed("Private key not found in Keychain")
+            }
+            let passphrase = KeychainHelper.shared.getPassphrase(for: serverId)
+            authConfig = .privateKey(username: username, privateKey: privateKey, passphrase: passphrase)
+        }
+
+        let connection = RealSSHConnection(
+            host: host,
+            port: port,
+            authConfig: authConfig,
+            serverId: serverId,
+            config: config
+        )
+
+        try await connection.connect()
+        return connection
+    }
+    #endif
+
+    /// 兼容旧接口 - 创建模拟连接
+    func createConnection(
+        host: String,
+        port: Int,
+        username: String,
+        authMethod: AuthMethod,
+        serverId: UUID
+    ) async throws -> SSHConnection {
+        switch authMethod {
+        case .password:
+            guard let password = KeychainHelper.shared.getPassword(for: serverId) else {
+                throw SSHError.authenticationFailed("Credentials not found")
+            }
+            // 旧接口仍然返回 SSHConnection 类型，用于兼容
+            let mockConnection = SSHConnection(
+                host: host, port: port, username: username,
+                authMethod: authMethod, credentials: password, serverId: serverId
+            )
+            try await mockConnection.connect()
+            return mockConnection
+
+        case .privateKey:
+            guard let privateKey = KeychainHelper.shared.getPrivateKey(for: serverId) else {
+                throw SSHError.authenticationFailed("Credentials not found")
+            }
+            let mockConnection = SSHConnection(
+                host: host, port: port, username: username,
+                authMethod: authMethod, credentials: privateKey, serverId: serverId
+            )
+            try await mockConnection.connect()
+            return mockConnection
+        }
     }
 }
 
@@ -375,21 +614,22 @@ actor ServerMonitor {
     private var tasks: [UUID: Task<Void, Never>] = [:]
     private let interval: TimeInterval = 30.0
     private var handler: ((MonitorUpdate) -> Void)?
-    
+
     func setUpdateHandler(_ h: @escaping (MonitorUpdate) -> Void) { handler = h }
-    
-    func startMonitoring(serverId: UUID, connection: SSHConnection) {
+
+    // 监控模拟连接
+    func startMonitoring(serverId: UUID, simulatedConnection: SSHConnection) {
         stopMonitoring(serverId)
         let task = Task {
             while !Task.isCancelled {
                 do {
-                    let cpuOutput = try await connection.execute(command: "top -bn1 | head -5")
-                    let memOutput = try await connection.execute(command: "free -m")
-                    
+                    let cpuOutput = try await simulatedConnection.execute(command: "top -bn1 | head -5")
+                    let memOutput = try await simulatedConnection.execute(command: "free -m")
+
                     let cpu = parseCPU(cpuOutput)
                     let mem = parseMem(memOutput)
                     let status: ServerStatus = (cpu > 80 || mem > 80) ? .warning : .online
-                    
+
                     handler?(MonitorUpdate(serverId: serverId, cpuUsage: cpu, memoryUsage: mem, status: status))
                     try await Task.sleep(for: .seconds(interval))
                 } catch {
@@ -400,14 +640,40 @@ actor ServerMonitor {
         }
         tasks[serverId] = task
     }
-    
+
+    #if canImport(NMSSH)
+    // 监控真实 SSH 连接
+    func startMonitoring(serverId: UUID, realConnection: RealSSHConnection) {
+        stopMonitoring(serverId)
+        let task = Task {
+            while !Task.isCancelled {
+                do {
+                    let cpuOutput = try await realConnection.execute(command: "top -bn1 | head -5")
+                    let memOutput = try await realConnection.execute(command: "free -m")
+
+                    let cpu = parseCPU(cpuOutput)
+                    let mem = parseMem(memOutput)
+                    let status: ServerStatus = (cpu > 80 || mem > 80) ? .warning : .online
+
+                    handler?(MonitorUpdate(serverId: serverId, cpuUsage: cpu, memoryUsage: mem, status: status))
+                    try await Task.sleep(for: .seconds(interval))
+                } catch {
+                    handler?(MonitorUpdate(serverId: serverId, cpuUsage: 0, memoryUsage: 0, status: .offline))
+                    break
+                }
+            }
+        }
+        tasks[serverId] = task
+    }
+    #endif
+
     func stopMonitoring(_ id: UUID) {
         tasks[id]?.cancel()
         tasks.removeValue(forKey: id)
     }
-    
+
     func stopAll() { tasks.keys.forEach { stopMonitoring($0) } }
-    
+
     private func parseCPU(_ output: String) -> Double {
         if let range = output.range(of: "([\\d.]+) us", options: .regularExpression) {
             let nums = String(output[range]).extractNumbers()
@@ -415,7 +681,7 @@ actor ServerMonitor {
         }
         return 45.5
     }
-    
+
     private func parseMem(_ output: String) -> Double {
         for line in output.split(separator: "\n") {
             if line.contains("Mem:") {
