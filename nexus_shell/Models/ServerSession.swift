@@ -68,6 +68,13 @@ class ServerSession: ObservableObject {
 
     let createdAt: Date
 
+    /// 终端输出缓冲区常量
+    private enum TerminalConstants {
+        static let outputBufferLimit = 100000
+        static let outputBufferTrimPoint = 50000
+        static let commandHistoryLimit = 100
+    }
+
     #if canImport(NMSSH)
     private(set) var realSSHConnection: RealSSHConnection?
     #endif
@@ -79,6 +86,11 @@ class ServerSession: ObservableObject {
     private var sshConfig: SSHConfig
     private var reconnectTask: Task<Void, Never>?
     private var reconnectAttempts: Int = 0
+
+    /// 命令历史持久化键
+    private var commandHistoryKey: String {
+        "commandHistory_\(server.id.uuidString)"
+    }
 
     enum SSHConnectionMode {
         #if canImport(NMSSH)
@@ -92,6 +104,9 @@ class ServerSession: ObservableObject {
         self.createdAt = Date()
         self.sshConfig = AppSettings.shared.defaultSSHConfig
 
+        // 加载持久化的命令历史
+        self.commandHistory = Self.loadCommandHistory(for: server.id)
+
         outputBuffer = """
         ┌─────────────────────────────────────────┐
         │  Nexus Shell - SSH Terminal             │
@@ -101,8 +116,9 @@ class ServerSession: ObservableObject {
 
         """
 
-        Task {
-            await monitor.setUpdateHandler { [weak self] update in
+        Task { [weak self] in
+            guard let self else { return }
+            await self.monitor.setUpdateHandler { [weak self] update in
                 Task { @MainActor [weak self] in
                     guard let self, self.server.id == update.serverId else { return }
 
@@ -268,7 +284,11 @@ class ServerSession: ObservableObject {
         }
 
         if !command.isEmpty && command != "\n" {
-            commandHistory.append(command.trimmingCharacters(in: .newlines))
+            let trimmedCommand = command.trimmingCharacters(in: .newlines)
+            commandHistory.append(trimmedCommand)
+
+            // 保存命令历史到 UserDefaults
+            Self.saveCommandHistory(commandHistory, for: server.id)
         }
 
         appendOutput("$ " + command.trimmingCharacters(in: .whitespacesAndNewlines) + "\n")
@@ -375,8 +395,8 @@ class ServerSession: ObservableObject {
     private func appendOutput(_ text: String) {
         outputBuffer += text
 
-        if outputBuffer.count > 100000 {
-            let startIndex = outputBuffer.index(outputBuffer.startIndex, offsetBy: 50000)
+        if outputBuffer.count > TerminalConstants.outputBufferLimit {
+            let startIndex = outputBuffer.index(outputBuffer.startIndex, offsetBy: TerminalConstants.outputBufferTrimPoint)
             outputBuffer = String(outputBuffer[startIndex...])
         }
     }
@@ -391,5 +411,26 @@ class ServerSession: ObservableObject {
     func getCommand(at index: Int) -> String? {
         if index < 0 || index >= commandHistory.count { return nil }
         return commandHistory[commandHistory.count - 1 - index]
+    }
+
+    /// 加载命令历史
+    private static func loadCommandHistory(for serverId: UUID) -> [String] {
+        let key = "commandHistory_\(serverId.uuidString)"
+        return UserDefaults.standard.stringArray(forKey: key) ?? []
+    }
+
+    /// 保存命令历史
+    private static func saveCommandHistory(_ history: [String], for serverId: UUID) {
+        let key = "commandHistory_\(serverId.uuidString)"
+        // 保留最近 100 条命令历史
+        let trimmedHistory = Array(history.suffix(100))
+        UserDefaults.standard.set(trimmedHistory, forKey: key)
+    }
+
+    /// 清除命令历史
+    func clearCommandHistory() {
+        commandHistory = []
+        let key = "commandHistory_\(server.id.uuidString)"
+        UserDefaults.standard.removeObject(forKey: key)
     }
 }

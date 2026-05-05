@@ -203,5 +203,8 @@ class ServerStore: ObservableObject {
     func refreshAllServers() {
         loadServers()
     }
-    
+
+    deinit {
+        stopAutoRefresh()
+    }
 }

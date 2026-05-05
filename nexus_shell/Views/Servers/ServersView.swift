@@ -318,8 +318,13 @@ struct ServersView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .navigationDestination(item: $selectedServer) { server in
-            ServerDetailView(server: server)
+        .navigationDestination(isPresented: Binding<Bool>(
+            get: { selectedServer != nil },
+            set: { if !$0 { selectedServer = nil } }
+        )) {
+            if let server = selectedServer {
+                ServerDetailView(server: server)
+            }
         }
     }
 }

@@ -22,12 +22,14 @@ class DatabaseManager {
     private init() {
         // 数据库文件路径
         let fileManager = FileManager.default
-        let documentsPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!.path
-        dbPath = (documentsPath as NSString).appendingPathComponent("nexus_shell.sqlite")
-        
+        guard let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            fatalError("无法获取文档目录路径")
+        }
+        dbPath = (documentsURL.path as NSString).appendingPathComponent("nexus_shell.sqlite")
+
         // 打开或创建数据库
         openDatabase()
-        
+
         // 创建表
         createTables()
     }

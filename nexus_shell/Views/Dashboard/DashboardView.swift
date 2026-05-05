@@ -15,11 +15,11 @@ struct DashboardView: View {
     @State private var isRefreshing = false
     @State private var showingAddServer = false
 
-    private let refreshTimer = Timer.publish(every: 5, on: .main, in: .common).autoconnect()
-    
     private var settings: AppSettings {
         AppSettings.shared
     }
+
+    @State private var refreshTimer = Timer.publish(every: AppSettings.shared.refreshInterval, on: .main, in: .common).autoconnect()
     
     // 使用所有服务器（不区分文件夹）
     var allServers: [Server] {
@@ -75,6 +75,7 @@ struct DashboardView: View {
                                 .foregroundStyle(AppColors.accent)
                         }
                     }
+                    .accessibilityIdentifier("dashboard.refresh")
                 }
             }
             .onReceive(refreshTimer) { _ in
@@ -321,20 +322,84 @@ struct CPUChartSection: View {
 /// 图表占位视图
 struct ChartPlaceholderView: View {
     let servers: [Server]
-    
+
+    @State private var cpuHistory: [(Date, Double)] = []
+
     var body: some View {
-        HStack(spacing: 2) {
-            ForEach(0..<50, id: \.self) { index in
-                let randomHeight = CGFloat.random(in: 20...80)
-                Rectangle()
-                    .fill(AppColors.accent.opacity(0.3 + Double(index) / 100))
-                    .frame(width: 4, height: randomHeight)
-                    .cornerRadius(1)
+        VStack(spacing: DesignSystem.Spacing.xs) {
+            // CPU 使用率图表
+            HStack(spacing: 2) {
+                ForEach(cpuHistory.indices, id: \.self) { index in
+                    let value = cpuHistory[index].1
+                    let height = CGFloat(value / 100.0) * 60
+
+                    Rectangle()
+                        .fill(barColor(for: value))
+                        .frame(width: 4, height: max(2, height))
+                        .cornerRadius(1)
+                }
+
+                // 如果数据不足，用空位填充
+                if cpuHistory.count < 50 {
+                    ForEach(0..<(50 - cpuHistory.count), id: \.self) { _ in
+                        Rectangle()
+                            .fill(AppColors.secondaryBackground.opacity(0.3))
+                            .frame(width: 4, height: 2)
+                            .cornerRadius(1)
+                    }
+                }
+            }
+            .frame(height: 60)
+
+            // 最大最小值标签
+            if !cpuHistory.isEmpty {
+                HStack {
+                    Text("Min: \(Int(cpuHistory.map { $0.1 }.min() ?? 0))%")
+                        .font(AppTypography.labelSmall)
+                        .foregroundStyle(AppColors.secondaryText)
+
+                    Spacer()
+
+                    Text("Avg: \(Int(cpuHistory.map { $0.1 }.reduce(0, +) / Double(cpuHistory.count)))%")
+                        .font(AppTypography.labelSmall)
+                        .foregroundStyle(AppColors.secondaryText)
+
+                    Spacer()
+
+                    Text("Max: \(Int(cpuHistory.map { $0.1 }.max() ?? 0))%")
+                        .font(AppTypography.labelSmall)
+                        .foregroundStyle(AppColors.secondaryText)
+                }
             }
         }
-        .frame(height: 80)
         .background(AppColors.secondaryBackground.opacity(0.3))
         .cornerRadius(DesignSystem.Radius.sm)
+        .onAppear {
+            // 从服务器获取当前 CPU 使用率
+            updateCPUHistory()
+        }
+        .onChange(of: servers) { _, _ in
+            updateCPUHistory()
+        }
+    }
+
+    private func updateCPUHistory() {
+        let now = Date()
+        let avgCPU = servers.compactMap { $0.cpuUsage }.reduce(0, +) / Double(max(1, servers.count))
+
+        // 添加新的数据点
+        cpuHistory.append((now, avgCPU))
+
+        // 保留最近 50 个数据点
+        if cpuHistory.count > 50 {
+            cpuHistory = Array(cpuHistory.suffix(50))
+        }
+    }
+
+    private func barColor(for value: Double) -> Color {
+        if value < 50 { return AppColors.online }
+        if value < 80 { return AppColors.warning }
+        return AppColors.offline
     }
 }
 

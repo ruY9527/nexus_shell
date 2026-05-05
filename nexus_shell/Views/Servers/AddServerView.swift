@@ -18,13 +18,13 @@ struct AddServerView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var serverStore = ServerStore.shared
     @StateObject private var folderStore = FolderStore.shared
-    
+
     /// 初始文件夹ID（从文件夹页面添加时传入）
     let folderId: UUID?
-    
-    /// 根目录的特殊标识（固定UUID）
-    private let rootFolderId = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
-    
+
+    /// 根目录的特殊标识（使用 nil 表示根目录）
+    private static let rootFolderPlaceholder = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+
     @State private var name: String = ""
     @State private var host: String = ""
     @State private var port: String = "22"
@@ -36,18 +36,17 @@ struct AddServerView: View {
     @State private var tags: String = ""
     @State private var notes: String = ""
     @State private var selectedFolderId: UUID
-    
+
     @State private var isTestingConnection = false
     @State private var connectionTestResult: AddServerConnectionTestResult?
     @State private var showingSaveConfirmation = false
     @State private var showingError: Bool = false
     @State private var errorMessage: String = ""
-    
+
     init(folderId: UUID? = nil) {
         self.folderId = folderId
         // 初始化选中的文件夹：使用固定的根目录标识
-        let rootId = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
-        _selectedFolderId = State(initialValue: folderId ?? rootId)
+        _selectedFolderId = State(initialValue: folderId ?? Self.rootFolderPlaceholder)
     }
     
     var isValid: Bool {

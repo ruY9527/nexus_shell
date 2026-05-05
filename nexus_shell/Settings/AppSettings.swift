@@ -213,6 +213,7 @@ final class AppSettings {
 // MARK: - Settings Observable Object
 
 /// 用于 SwiftUI 视图监听设置变化
+@MainActor
 class SettingsObserver: ObservableObject {
     static let shared = SettingsObserver()
 
@@ -246,17 +247,15 @@ class SettingsObserver: ObservableObject {
     }
 
     @objc private func settingsDidChange() {
-        DispatchQueue.main.async {
-            self.colorScheme = AppSettings.shared.preferredColorScheme
-            self.hapticFeedbackEnabled = AppSettings.shared.hapticFeedbackEnabled
-            self.autoRefreshEnabled = AppSettings.shared.autoRefreshEnabled
-            self.refreshInterval = AppSettings.shared.refreshInterval
-            self.terminalFontSize = AppSettings.shared.terminalFontSize
-            self.colorSchemeString = AppSettings.shared.colorSchemeString
-            self.language = AppSettings.shared.language
-            self.sshMode = AppSettings.shared.sshMode
-            self.defaultSSHConfig = AppSettings.shared.defaultSSHConfig
-        }
+        colorScheme = AppSettings.shared.preferredColorScheme
+        hapticFeedbackEnabled = AppSettings.shared.hapticFeedbackEnabled
+        autoRefreshEnabled = AppSettings.shared.autoRefreshEnabled
+        refreshInterval = AppSettings.shared.refreshInterval
+        terminalFontSize = AppSettings.shared.terminalFontSize
+        colorSchemeString = AppSettings.shared.colorSchemeString
+        language = AppSettings.shared.language
+        sshMode = AppSettings.shared.sshMode
+        defaultSSHConfig = AppSettings.shared.defaultSSHConfig
     }
 
     func setColorScheme(_ value: String) {

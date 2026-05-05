@@ -257,7 +257,8 @@ struct CommandInputBarUIKit: UIViewRepresentable {
             // id 变化时强制获取焦点并弹出键盘
             if context.coordinator.currentId != id {
                 context.coordinator.currentId = id
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                // 使用 Task 确保在主线程执行，并等待下一个运行循环
+                Task { @MainActor in
                     if isEnabled {
                         textField.becomeFirstResponder()
                     }

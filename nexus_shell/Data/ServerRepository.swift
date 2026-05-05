@@ -256,19 +256,27 @@ class ServerRepository {
     /// 统计各状态服务器数量
     func countByStatus() -> [ServerStatus: Int] {
         var counts: [ServerStatus: Int] = [:]
-        
+
+        // 初始化所有状态为0
         for status in ServerStatus.allCases {
-            let sql = "SELECT COUNT(*) as count FROM servers WHERE status = ?;"
-            let params: [Any] = [status.rawValue]
-            
-            guard let rows = db.query(sql, params: params), let row = rows.first else {
-                counts[status] = 0
-                continue
-            }
-            
-            counts[status] = row["count"] as? Int ?? 0
+            counts[status] = 0
         }
-        
+
+        // 使用 GROUP BY 一次查询获取所有状态的计数
+        let sql = "SELECT status, COUNT(*) as count FROM servers GROUP BY status;"
+
+        guard let rows = db.query(sql) else {
+            return counts
+        }
+
+        for row in rows {
+            if let statusString = row["status"] as? String,
+               let status = ServerStatus(rawValue: statusString),
+               let count = row["count"] as? Int {
+                counts[status] = count
+            }
+        }
+
         return counts
     }
     
