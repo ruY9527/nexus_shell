@@ -204,7 +204,7 @@ class ServerStore: ObservableObject {
         loadServers()
     }
 
-    deinit {
-        stopAutoRefresh()
+    nonisolated deinit {
+        updateTimer?.invalidate()
     }
 }

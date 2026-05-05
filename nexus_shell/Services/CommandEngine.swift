@@ -14,16 +14,16 @@ protocol CommandEngine {
     var username: String { get }
     var host: String { get }
 
-    mutating func setCurrentDirectory(_ path: String)
+    func setCurrentDirectory(_ path: String)
     func execute(_ command: String) -> String
 }
 
 /// 默认命令引擎实现
-struct DefaultCommandEngine: CommandEngine {
+class DefaultCommandEngine: CommandEngine {
     let host: String
     let username: String
     let port: Int
-    var currentDirectory: String
+    private(set) var currentDirectory: String
     let homeDirectory: String
 
     init(host: String, username: String, port: Int) {
@@ -34,7 +34,7 @@ struct DefaultCommandEngine: CommandEngine {
         self.currentDirectory = homeDirectory
     }
 
-    mutating func setCurrentDirectory(_ path: String) {
+    func setCurrentDirectory(_ path: String) {
         currentDirectory = path
     }
 

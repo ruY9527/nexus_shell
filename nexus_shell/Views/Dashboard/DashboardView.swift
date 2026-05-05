@@ -19,7 +19,7 @@ struct DashboardView: View {
         AppSettings.shared
     }
 
-    @State private var refreshTimer = Timer.publish(every: AppSettings.shared.refreshInterval, on: .main, in: .common).autoconnect()
+    @State private var refreshTimer = Timer.publish(every: TimeInterval(AppSettings.shared.refreshInterval), on: .main, in: .common).autoconnect()
     
     // 使用所有服务器（不区分文件夹）
     var allServers: [Server] {

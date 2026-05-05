@@ -57,7 +57,7 @@ struct AddServerView: View {
     }
     
     var selectedFolderName: String {
-        if selectedFolderId != rootFolderId {
+        if selectedFolderId != Self.rootFolderPlaceholder {
             if let folder = folderStore.getFolder(byId: selectedFolderId) {
                 return folder.name
             }
@@ -96,7 +96,7 @@ struct AddServerView: View {
                     Picker(String(localized: "Folder"), selection: $selectedFolderId) {
                         // 根目录选项（使用固定的UUID）
                         Text("Root")
-                            .tag(rootFolderId)
+                            .tag(Self.rootFolderPlaceholder)
                         
                         // 文件夹选项
                         ForEach(folderStore.folders) { folder in
@@ -331,9 +331,9 @@ struct AddServerView: View {
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
         
-        // 判断是否为根目录（使用固定的rootFolderId判断）
+        // 判断是否为根目录（使用固定的Self.rootFolderPlaceholder判断）
         let actualFolderId: UUID? = {
-            if selectedFolderId == rootFolderId {
+            if selectedFolderId == Self.rootFolderPlaceholder {
                 return nil  // 根目录
             }
             return selectedFolderId
