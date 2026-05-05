@@ -39,10 +39,10 @@ class DatabaseManager {
     /// 打开数据库
     private func openDatabase() {
         if sqlite3_open(dbPath, &db) != SQLITE_OK {
-            print("无法打开数据库: \(dbPath)")
+            AppLogger.database("Failed to open database: \(dbPath)", level: .error)
             db = nil
         } else {
-            print("数据库已打开: \(dbPath)")
+            AppLogger.database("Database opened: \(dbPath)", level: .info)
         }
     }
     
@@ -142,7 +142,7 @@ class DatabaseManager {
         
         // 如果缺少 folder_id 列，添加它
         if !hasFolderId {
-            print("数据库迁移：添加 folder_id 列到 servers 表")
+            AppLogger.database("Migrating database: adding folder_id column to servers table", level: .info)
             let addFolderIdSql = "ALTER TABLE servers ADD COLUMN folder_id TEXT;"
             _ = executeQuery(addFolderIdSql)
             
@@ -162,7 +162,7 @@ class DatabaseManager {
         
         let deletedCount = execute(sql, params: params)
         if deletedCount > 0 {
-            print("已清理 \(deletedCount) 条过期日志（超过 \(logRetentionDays) 天）")
+            AppLogger.database("Cleaned up \(deletedCount) expired logs (older than \(logRetentionDays) days)", level: .info)
         }
     }
     
@@ -194,13 +194,13 @@ class DatabaseManager {
         
         if sqlite3_prepare_v2(db, sql, -1, &statement, nil) != SQLITE_OK {
             let errorMessage = String(cString: sqlite3_errmsg(db))
-            print("SQL 准备失败: \(errorMessage)")
+            AppLogger.database("SQL prepare failed: \(errorMessage)", level: .error)
             return false
         }
-        
+
         if sqlite3_step(statement) != SQLITE_DONE {
             let errorMessage = String(cString: sqlite3_errmsg(db))
-            print("SQL 执行失败: \(errorMessage)")
+            AppLogger.database("SQL execute failed: \(errorMessage)", level: .error)
             sqlite3_finalize(statement)
             return false
         }
@@ -216,7 +216,7 @@ class DatabaseManager {
         
         if sqlite3_prepare_v2(db, sql, -1, &statement, nil) != SQLITE_OK {
             let errorMessage = String(cString: sqlite3_errmsg(db))
-            print("SQL 准备失败: \(errorMessage)")
+            AppLogger.database("SQL prepare failed: \(errorMessage)", level: .error)
             return nil
         }
         
@@ -270,16 +270,16 @@ class DatabaseManager {
         
         if sqlite3_prepare_v2(db, sql, -1, &statement, nil) != SQLITE_OK {
             let errorMessage = String(cString: sqlite3_errmsg(db))
-            print("SQL 准备失败: \(errorMessage)")
+            AppLogger.database("SQL prepare failed: \(errorMessage)", level: .error)
             return 0
         }
-        
+
         // 绑定参数
         bindParams(statement: statement, params: params)
-        
+
         if sqlite3_step(statement) != SQLITE_DONE {
             let errorMessage = String(cString: sqlite3_errmsg(db))
-            print("SQL 执行失败: \(errorMessage)")
+            AppLogger.database("SQL execute failed: \(errorMessage)", level: .error)
             sqlite3_finalize(statement)
             return 0
         }

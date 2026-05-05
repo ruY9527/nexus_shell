@@ -109,7 +109,7 @@ class FolderRepository {
         // 检查文件夹是否为空
         if countByFolder(folderId) > 0 {
             // 文件夹不为空，不允许删除
-            print("文件夹不为空，无法删除")
+            AppLogger.database("Cannot delete non-empty folder: \(folderId)", level: AppLogLevel.warning)
             return false
         }
         

@@ -253,7 +253,7 @@ final class SSHClientManager {
                 )
                 return .real(connection)
             } catch {
-                print("Real SSH connection failed, falling back to simulated mode: \(error.localizedDescription)")
+                AppLogger.ssh("Real SSH connection failed, falling back to simulated mode: \(error.localizedDescription)", level: .warning)
                 let connection = try await createSimulatedConnection(
                     host: host, port: port, username: username,
                     authMethod: authMethod, serverId: serverId

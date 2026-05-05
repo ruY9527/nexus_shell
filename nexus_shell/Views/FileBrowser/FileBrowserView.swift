@@ -415,7 +415,7 @@ class FileBrowserViewModel: ObservableObject {
             }
             files = try await sftpManager.listDirectory(path: currentPath)
         } catch {
-            print("Failed to load files: \(error.localizedDescription)")
+            AppLogger.sftp("Failed to load files: \(error.localizedDescription)", level: .error)
         }
 
         isLoading = false

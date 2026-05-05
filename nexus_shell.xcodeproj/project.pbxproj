@@ -6,9 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
 		AE65EC712F98713000D13575 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -35,22 +32,16 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		AE65EC652F98712A00D13575 /* nexus_shell */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = nexus_shell;
 			sourceTree = "<group>";
 		};
 		AE65EC732F98713000D13575 /* nexus_shellTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = nexus_shellTests;
 			sourceTree = "<group>";
 		};
 		AE65EC7D2F98713000D13575 /* nexus_shellUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = nexus_shellUITests;
 			sourceTree = "<group>";
 		};
@@ -234,9 +225,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
-
-/* Begin PBXShellScriptBuildPhase section */
-/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		AE65EC5F2F98712A00D13575 /* Sources */ = {
