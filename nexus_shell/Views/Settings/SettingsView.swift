@@ -253,7 +253,17 @@ struct SettingsView: View {
                             .foregroundStyle(AppColors.secondaryText)
                     }
 
-                    Link(destination: URL(string: "https://github.com")!) {
+                    HStack {
+                        Text("Author")
+                            .foregroundStyle(AppColors.primaryText)
+
+                        Spacer()
+
+                        Text("baobaoyang")
+                            .foregroundStyle(AppColors.secondaryText)
+                    }
+
+                    Link(destination: URL(string: "https://github.com/ruY9527/nexus_shell")!) {
                         HStack {
                             Image(systemName: "link")
                             Text("GitHub Repository")
