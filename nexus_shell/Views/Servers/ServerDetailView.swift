@@ -889,7 +889,12 @@ struct TerminalSessionSheet: View {
                     text: $commandInput,
                     id: inputFieldId,
                     isEnabled: session.state == .connected,
-                    onSubmit: sendCommand
+                    onTextChange: { _ in },
+                    onSubmit: sendCommand,
+                    onTabPressed: { session.sendCommand("\t") },
+                    onEscapePressed: { session.sendCommand("\u{001B}") },
+                    onUpPressed: { session.sendCommand("\u{001B}[A") },
+                    onDownPressed: { session.sendCommand("\u{001B}[B") }
                 )
                 
                 // 工具栏

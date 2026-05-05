@@ -11,11 +11,13 @@ import UIKit
 /// 终端视图
 struct TerminalView: View {
     @StateObject private var serverStore = ServerStore.shared
+    @StateObject private var completionEngine = CompletionEngine.shared
     @State private var showingServerPicker = false
     @State private var commandInput: String = ""
     @State private var showingQuickCommands = false
     @State private var showingFileBrowser = false
     @State private var inputFieldId: UUID = UUID()  // 用于重建输入框
+    @State private var currentDirectory: String = "/home"
 
     private var settings: AppSettings { AppSettings.shared }
 
@@ -29,24 +31,71 @@ struct TerminalView: View {
                 if let session = activeSession {
                     // 连接状态栏
                     ConnectionStatusBar(session: session)
-                    
+
                     // 终端内容区域
                     TerminalOutputView(session: session, fontSize: settings.terminalFontSize)
-                    
+
                     // 快捷命令面板
                     if showingQuickCommands {
                         QuickCommandsPanel(onCommand: { cmd in executeCommand(cmd) })
                     }
-                    
+
                     // 命令输入区域 - 使用 UIKit TextField 确保键盘升起
                     CommandInputBarUIKit(
                         prompt: "\(session.server.username)@\(session.server.host):~$",
                         text: $commandInput,
                         id: inputFieldId,
                         isEnabled: session.state == .connected,
-                        onSubmit: executeCommand
+                        onTextChange: { text in
+                            commandInput = text
+                            completionEngine.getCompletions(
+                                for: text,
+                                cursorPosition: nil,
+                                currentDirectory: currentDirectory
+                            )
+                        },
+                        onSubmit: executeCommand,
+                        onTabPressed: {
+                            if let completion = completionEngine.handleTab() {
+                                commandInput = completion.text
+                            }
+                        },
+                        onEscapePressed: {
+                            completionEngine.hideCompletions()
+                        },
+                        onUpPressed: {
+                            if completionEngine.isShowingCompletions {
+                                completionEngine.selectPrevious()
+                            } else {
+                                sendKeyToSession("\u{001B}[A")
+                            }
+                        },
+                        onDownPressed: {
+                            if completionEngine.isShowingCompletions {
+                                completionEngine.selectNext()
+                            } else {
+                                sendKeyToSession("\u{001B}[B")
+                            }
+                        }
                     )
-                    
+
+                    // 自动补全弹窗
+                    if completionEngine.isShowingCompletions {
+                        CompletionPopupView(
+                            completions: completionEngine.currentCompletions,
+                            selectedIndex: $completionEngine.selectedIndex,
+                            onSelect: { item in
+                                if let completion = completionEngine.applyCompletion(at: completionEngine.selectedIndex) {
+                                    commandInput = completion.text
+                                }
+                            },
+                            onDismiss: {
+                                completionEngine.hideCompletions()
+                            }
+                        )
+                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                    }
+
                     // 工具栏
                     TerminalToolbarView(
                         showingQuickCommands: $showingQuickCommands,
@@ -182,12 +231,17 @@ struct CommandInputBarUIKit: UIViewRepresentable {
     @Binding var text: String
     let id: UUID
     let isEnabled: Bool
+    let onTextChange: (String) -> Void
     let onSubmit: (String) -> Void
-    
+    let onTabPressed: () -> Void
+    let onEscapePressed: () -> Void
+    let onUpPressed: () -> Void
+    let onDownPressed: () -> Void
+
     func makeUIView(context: Context) -> UIView {
         let container = UIView()
         container.backgroundColor = UIColor(AppColors.cardBackground)
-        
+
         // 提示符标签
         let promptLabel = UILabel()
         promptLabel.text = prompt
@@ -195,7 +249,7 @@ struct CommandInputBarUIKit: UIViewRepresentable {
         promptLabel.textColor = UIColor(AppColors.accent)
         promptLabel.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(promptLabel)
-        
+
         // 输入框 - 使用 UITextField
         let textField = UITextField()
         textField.font = UIFont.monospacedSystemFont(ofSize: 14, weight: .regular)
@@ -210,7 +264,7 @@ struct CommandInputBarUIKit: UIViewRepresentable {
         textField.tag = 100  // 用于查找
         textField.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(textField)
-        
+
         // 发送按钮
         let sendButton = UIButton(type: .system)
         sendButton.setImage(UIImage(systemName: "arrow.up.circle.fill"), for: .normal)
@@ -219,31 +273,36 @@ struct CommandInputBarUIKit: UIViewRepresentable {
         sendButton.addTarget(context.coordinator, action: #selector(Coordinator.sendPressed), for: .touchUpInside)
         sendButton.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(sendButton)
-        
+
         // 布局约束
         NSLayoutConstraint.activate([
             promptLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
             promptLabel.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-            
+
             textField.leadingAnchor.constraint(equalTo: promptLabel.trailingAnchor, constant: 8),
             textField.trailingAnchor.constraint(equalTo: sendButton.leadingAnchor, constant: -8),
             textField.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-            
+
             sendButton.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
             sendButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
             sendButton.widthAnchor.constraint(equalToConstant: 30),
-            
+
             container.heightAnchor.constraint(equalToConstant: 44)
         ])
-        
+
         // 保存 textField 引用
         context.coordinator.textField = textField
-        
+
         return container
     }
-    
+
     func updateUIView(_ uiView: UIView, context: Context) {
         context.coordinator.onSubmit = onSubmit
+        context.coordinator.onTextChange = onTextChange
+        context.coordinator.onTabPressed = onTabPressed
+        context.coordinator.onEscapePressed = onEscapePressed
+        context.coordinator.onUpPressed = onUpPressed
+        context.coordinator.onDownPressed = onDownPressed
 
         // 更新文本
         if let textField = uiView.viewWithTag(100) as? UITextField {
@@ -253,7 +312,7 @@ struct CommandInputBarUIKit: UIViewRepresentable {
 
             textField.isEnabled = isEnabled
             textField.placeholder = isEnabled ? "输入命令..." : "等待连接..."
-            
+
             // id 变化时强制获取焦点并弹出键盘
             if context.coordinator.currentId != id {
                 context.coordinator.currentId = id
@@ -274,7 +333,7 @@ struct CommandInputBarUIKit: UIViewRepresentable {
             sendButton.isEnabled = isEnabled
             sendButton.alpha = isEnabled ? 1.0 : 0.35
         }
-        
+
         // 更新提示符
         for subview in uiView.subviews {
             if let label = subview as? UILabel {
@@ -282,38 +341,52 @@ struct CommandInputBarUIKit: UIViewRepresentable {
             }
         }
     }
-    
+
     func makeCoordinator() -> Coordinator {
-        Coordinator(text: $text, onSubmit: onSubmit)
+        Coordinator(text: $text, onSubmit: onSubmit, onTextChange: onTextChange, onTabPressed: onTabPressed, onEscapePressed: onEscapePressed, onUpPressed: onUpPressed, onDownPressed: onDownPressed)
     }
-    
+
     class Coordinator: NSObject, UITextFieldDelegate {
         @Binding var text: String
         var onSubmit: (String) -> Void
-        
+        var onTextChange: (String) -> Void
+        var onTabPressed: () -> Void
+        var onEscapePressed: () -> Void
+        var onUpPressed: () -> Void
+        var onDownPressed: () -> Void
+
         var textField: UITextField?
         var currentId: UUID?
-        
-        init(text: Binding<String>, onSubmit: @escaping (String) -> Void) {
+
+        init(text: Binding<String>, onSubmit: @escaping (String) -> Void, onTextChange: @escaping (String) -> Void, onTabPressed: @escaping () -> Void, onEscapePressed: @escaping () -> Void, onUpPressed: @escaping () -> Void, onDownPressed: @escaping () -> Void) {
             self._text = text
             self.onSubmit = onSubmit
+            self.onTextChange = onTextChange
+            self.onTabPressed = onTabPressed
+            self.onEscapePressed = onEscapePressed
+            self.onUpPressed = onUpPressed
+            self.onDownPressed = onDownPressed
         }
-        
+
         func textFieldDidChangeSelection(_ textField: UITextField) {
-            text = textField.text ?? ""
+            let newText = textField.text ?? ""
+            if newText != text {
+                text = newText
+                onTextChange(newText)
+            }
         }
-        
+
         func textFieldShouldReturn(_ textField: UITextField) -> Bool {
             submit(textField)
             return true
         }
-        
+
         @objc func sendPressed() {
             if let textField {
                 submit(textField)
             }
         }
-        
+
         // 允许始终编辑
         func textFieldShouldBeginEditing(_ textField: UITextField) -> Bool {
             return true
