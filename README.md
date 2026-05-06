@@ -8,7 +8,7 @@
   <p>远程服务器管理与终端模拟，尽在指尖</p>
 
   <p>
-    <img src="https://img.shields.io/badge/Platform-iOS%2015.0+-blue.svg" alt="Platform">
+    <img src="https://img.shields.io/badge/Platform-iOS%2017.0+-blue.svg" alt="Platform">
     <img src="https://img.shields.io/badge/Language-Swift-orange.svg" alt="Language">
     <img src="https://img.shields.io/badge/Framework-SwiftUI-green.svg" alt="Framework">
   </p>
@@ -26,17 +26,17 @@
 - **连接测试** - 添加服务器前可测试连接是否可达
 
 ### 终端模拟
-- **完整终端体验** - 支持 100+ 标准 Linux 命令模拟输出
+- **真实 SSH 连接** - 基于 NMSSH 库的完整终端体验
 - **命令历史** - 保存执行的命令历史记录，支持上下键翻阅
 - **快捷工具栏** - ESC、TAB、方向键等常用按键一键输入
 - **会话保持** - 切换视图后保持连接状态，无需重复登录
-- **快速命令** - 内置 hostname、uname、uptime 等常用命令快捷按钮
+- **PTY 支持** - 交互式 shell 和真正的终端体验
 
 ### SSH 连接
-- **双模式连接** - 支持模拟模式和真实 SSH 连接（需 NMSSH 库）
+- **真实 SSH 连接** - 使用 NMSSH 库建立真实的 SSH 连接
 - **自动重连** - 连接断开后自动尝试重连，可配置重连次数和间隔
 - **连接配置** - 可配置连接超时、命令超时、Keep-Alive 间隔等参数
-- **连接质量** - 实时显示延迟和连接质量指示器
+- **SFTP 支持** - 内置文件浏览器，通过 SFTP 访问远程文件
 
 ### 实时监控
 - **仪表盘概览** - 一览所有服务器状态，在线/警告/离线统计
@@ -58,52 +58,6 @@
 
 ---
 
-## 支持的 Linux 命令
-
-### 文件系统
-`ls`, `ls -l`, `ls -la`, `cd`, `pwd`, `cat`, `touch`, `mkdir`, `rm`, `cp`, `mv`, `find`, `which`
-
-### 系统信息
-`uname`, `hostname`, `uptime`, `date`, `whoami`, `id`, `w`, `who`, `last`, `lscpu`, `lsblk`, `lsmem`
-
-### 资源监控
-`free`, `df`, `du`, `top`, `htop`, `vmstat`, `iostat`, `pidstat`
-
-### 进程管理
-`ps`, `ps aux`, `kill`, `killall`, `pgrep`, `pkill`, `pstree`
-
-### 网络
-`ifconfig`, `ip addr`, `ip route`, `netstat`, `ss`, `ping`, `traceroute`, `nslookup`, `dig`, `nmap`
-
-### 容器
-`docker ps`, `docker images`, `docker logs`, `docker exec`, `docker stats`, `docker compose`
-
-### 服务管理
-`systemctl`, `service`, `journalctl`, `crontab`
-
-### 用户管理
-`passwd`, `useradd`, `userdel`, `usermod`, `groups`, `lastlog`, `chage`
-
-### 包管理
-`apt/apt-get`, `dpkg`, `yum`, `dnf`, `snap`, `pip`, `npm`
-
-### 压缩工具
-`tar`, `gzip/gunzip`, `zip/unzip`, `bzip2/bunzip2`, `xz/unxz`, `7z`
-
-### SSH/传输
-`ssh-keygen`, `ssh-copy-id`, `scp`, `sftp`, `rsync`
-
-### 系统工具
-`lsof`, `nc (netcat)`, `screen`, `tmux`, `nohup`, `watch`, `time`, `dd`, `yes`, `expect`
-
-### 文本处理
-`sed`, `awk`, `cut`, `tr`, `rev`, `shuf`, `fmt`, `fold`, `paste`, `join`, `split`, `nl`, `grep`
-
-### 编码校验
-`base64`, `md5sum`, `sha256sum`, `sha1sum`, `cksum`, `xxd`, `hexdump`, `od`, `strings`
-
----
-
 ## 项目结构
 
 ```
@@ -118,61 +72,49 @@ nexus_shell/
 │   ├── Views/                         # SwiftUI 视图
 │   │   ├── MainTabView.swift          # 主标签导航
 │   │   ├── Dashboard/
-│   │   │   └── DashboardView.swift    # 仪表盘（服务器状态概览、资源图表）
+│   │   │   └── DashboardView.swift   # 仪表盘（服务器状态概览、资源图表）
 │   │   ├── Servers/
 │   │   │   ├── ServersView.swift      # 服务器列表（文件夹分组、搜索、排序）
 │   │   │   ├── ServerDetailView.swift # 服务器详情（编辑、连接测试）
 │   │   │   ├── ConnectionDetailView.swift # 连接详情
 │   │   │   ├── AddServerView.swift    # 添加服务器
-│   │   │   └── AddFolderView.swift    # 添加文件夹
+│   │   │   └── AddFolderView.swift   # 添加文件夹
 │   │   ├── Terminal/
-│   │   │   └── TerminalView.swift     # 终端界面（命令输入、输出显示、快捷按钮）
+│   │   │   └── TerminalView.swift    # 终端界面（命令输入、输出显示、快捷按钮）
 │   │   ├── Logs/
-│   │   │   └── LogsView.swift         # 日志查看（搜索、筛选）
+│   │   │   └── LogsView.swift        # 日志查看（搜索、筛选）
 │   │   ├── Settings/
-│   │   │   └── SettingsView.swift     # 设置界面
+│   │   │   └── SettingsView.swift    # 设置界面
 │   │   ├── Enhanced/
 │   │   │   └── ReconnectingStatusView.swift # 重连状态、连接质量指示器
 │   │   └── FileBrowser/
-│   │       └── FileBrowserView.swift  # SFTP 文件浏览器（需 NMSSH）
+│   │       └── FileBrowserView.swift # SFTP 文件浏览器
 │   ├── Services/                      # 服务层
-│   │   ├── SSHClientManager.swift     # SSH 连接管理（模拟/真实双模式）
-│   │   ├── CommandSimulator.swift     # 命令模拟引擎
-│   │   ├── RealSSHConnection.swift    # 真实 SSH 连接（基于 NMSSH，条件编译）
-│   │   ├── SFTPManager.swift          # SFTP 文件传输管理（条件编译）
+│   │   ├── SSHClientManager.swift     # SSH 连接管理
+│   │   ├── RealSSHConnection.swift    # 真实 SSH 连接（基于 NMSSH）
+│   │   ├── SFTPManager.swift          # SFTP 文件传输管理
 │   │   ├── SSHConfig.swift            # SSH 连接配置模型
-│   │   ├── KeychainHelper.swift       # Keychain 安全存储
-│   │   └── Commands/                  # 命令分类实现
-│   │       ├── FileCommands.swift     # 文件系统命令
-│   │       ├── SystemCommands.swift   # 系统信息命令
-│   │       ├── ResourceCommands.swift # 资源监控命令
-│   │       ├── ProcessCommands.swift  # 进程管理命令
-│   │       ├── NetworkCommands.swift  # 网络命令
-│   │       ├── DockerCommands.swift   # Docker 命令
-│   │       ├── ServiceCommands.swift  # 服务管理命令
-│   │       ├── UserCommands.swift     # 用户管理命令
-│   │       ├── PackageCommands.swift  # 包管理命令
-│   │       ├── LogCommands.swift      # 日志命令
-│   │       └── UtilityCommands.swift  # 实用工具命令
+│   │   └── KeychainHelper.swift       # Keychain 安全存储
 │   ├── Data/                          # 数据层
 │   │   ├── DatabaseManager.swift      # SQLite 数据库（建表、迁移、重置）
-│   │   ├── DataController.swift       # 数据初始化控制器
-│   │   ├── ServerRepository.swift     # 服务器数据仓储
-│   │   ├── FolderRepository.swift     # 文件夹数据仓储
-│   │   ├── LogRepository.swift        # 日志数据仓储
-│   │   ├── ServerStore.swift          # 服务器状态管理（Combine）
+│   │   ├── DataController.swift        # 数据初始化控制器
+│   │   ├── ServerRepository.swift      # 服务器数据仓储
+│   │   ├── FolderRepository.swift      # 文件夹数据仓储
+│   │   ├── LogRepository.swift         # 日志数据仓储
+│   │   ├── ServerStore.swift           # 服务器状态管理（Combine）
 │   │   ├── FolderStore.swift          # 文件夹状态管理
 │   │   └── LogStore.swift             # 日志状态管理
 │   ├── Settings/                      # 应用设置
 │   │   └── AppSettings.swift          # 用户偏好设置管理
 │   ├── Theme/                         # 主题配置
-│   │   ├── AppColors.swift            # 颜色定义
-│   │   ├── AppTypography.swift        # 字体样式
-│   │   └── DesignSystem.swift         # 设计规范（间距、圆角、动画）
+│   │   ├── AppColors.swift           # 颜色定义
+│   │   ├── AppTypography.swift       # 字体样式
+│   │   └── DesignSystem.swift          # 设计规范（间距、圆角、动画）
 │   └── Assets.xcassets/               # 资源文件
 ├── nexus_shellTests/                  # 单元测试
-├── nexus_shellUITests/                # UI 测试
-└── nexus_shell.xcodeproj/             # Xcode 项目
+├── nexus_shellUITests/               # UI 测试
+├── Podfile                           # CocoaPods 依赖管理
+└── nexus_shell.xcworkspace/           # Xcode 工作空间
 ```
 
 ---
@@ -186,13 +128,13 @@ nexus_shell/
 | **SQLite** | 本地数据库存储（服务器配置、日志） |
 | **Keychain** | 凭据安全存储（密码、私钥） |
 | **Combine** | 响应式编程（状态管理、数据绑定） |
-| **NMSSH** | 可选的真实 SSH/SFTP 连接库（条件编译） |
+| **NMSSH** | 真实 SSH/SFTP 连接库（CocoaPods） |
 
 ---
 
 ## 系统要求
 
-- iOS 15.0 或更高版本
+- iOS 17.0 或更高版本
 - Xcode 15.0 或更高版本
 - macOS 14.0 或更高版本（用于开发）
 
@@ -206,9 +148,15 @@ git clone https://github.com/ruY9527/nexus_shell.git
 cd nexus_shell
 ```
 
+### 安装依赖
+本项目使用 CocoaPods 管理 NMSSH 依赖：
+```bash
+pod install
+```
+
 ### 打开项目
 ```bash
-open nexus_shell.xcodeproj
+open nexus_shell.xcworkspace
 ```
 
 ### 编译运行
@@ -216,11 +164,16 @@ open nexus_shell.xcodeproj
 1. 选择目标设备（iOS Simulator 或真机）
 2. 点击 `Product > Run` 或按 `Cmd+R`
 
-### 命令行编译
+### 命令行编译（iOS 设备）
 ```bash
-xcodebuild -project nexus_shell.xcodeproj \
+xcodebuild -workspace nexus_shell.xcworkspace \
   -scheme nexus_shell \
-  -destination 'platform=iOS Simulator,name=iPhone 16' \
+  -configuration Debug \
+  -destination 'generic/platform=iOS' \
+  CODE_SIGN_IDENTITY="-" \
+  CODE_SIGNING_REQUIRED=NO \
+  CODE_SIGNING_ALLOWED=NO \
+  DEVELOPMENT_TEAM="" \
   build
 ```
 
@@ -255,6 +208,11 @@ xcodebuild -project nexus_shell.xcodeproj \
 4. 等待连接建立
 5. 开始输入命令
 
+### 文件浏览器
+1. 连接服务器后，点击顶部工具栏的文件夹图标
+2. 浏览远程服务器文件系统
+3. 上传、下载文件（需 SFTP 支持）
+
 ### 查看仪表盘
 1. 进入 **Dashboard** 标签页
 2. 查看所有服务器状态概览
@@ -266,9 +224,8 @@ xcodebuild -project nexus_shell.xcodeproj \
 ## 安全性
 
 - 所有密码和私钥存储于 iOS **Keychain**，应用卸载后自动清除
-- SSH 连接支持模拟模式（本地命令模拟）和真实 SSH 模式（需 NMSSH 库）
-- 本地 SQLite 数据库存储服务器配置
-- 真实 SSH 连接通过 `#if canImport(NMSSH)` 条件编译，未安装时自动降级为模拟模式
+- SSH 连接使用 NMSSH 库，支持密码和私钥认证
+- 本地 SQLite 数据库存储服务器配置（不含敏感信息）
 
 ---
 
@@ -289,6 +246,7 @@ xcodebuild -project nexus_shell.xcodeproj \
 | 1.0.0 | 2026.04.22 | 初始版本发布 |
 | 1.1.0 | 2026.05.03 | 移除默认示例数据，优化 SSH 连接架构，新增连接配置和重连机制 |
 | 1.1.1 | 2026.05.06 | 修复 GitHub 仓库地址，添加作者信息 |
+| 2.0.0 | 2026.05.07 | 迁移到真实 SSH 连接，使用 NMSSH 库替代模拟模式，新增 PTY 和 SFTP 支持 |
 
 ---
 

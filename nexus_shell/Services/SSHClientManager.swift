@@ -2,12 +2,11 @@
 //  SSHClientManager.swift
 //  nexus_shell
 //
-//  SSH Client Manager using Citadel
+//  SSH Client Manager using NMSSH
 //
 
 import Foundation
 import Network
-import Citadel
 
 /// 用于在并发环境中安全地修改值的包装类
 final class UnsafeSendableBox<T>: @unchecked Sendable {
@@ -62,8 +61,8 @@ final class SSHClientManager {
         )
 
         do {
-            try await connection.connect()
-            await connection.disconnect()
+            try connection.connect()
+            connection.disconnect()
             return .success
         } catch {
             return .failure(error.localizedDescription)
@@ -119,7 +118,7 @@ final class SSHClientManager {
         authMethod: AuthMethod,
         serverId: UUID,
         config: SSHConfig? = nil
-    ) async throws -> RealSSHConnection {
+    ) throws -> RealSSHConnection {
         var authConfig: SSHAuthConfig
 
         switch authMethod {
@@ -146,7 +145,7 @@ final class SSHClientManager {
             config: sshConfig
         )
 
-        try await connection.connect()
+        try connection.connect()
         return connection
     }
 }
@@ -198,8 +197,8 @@ actor ServerMonitor {
         let task = Task {
             while !Task.isCancelled {
                 do {
-                    let cpuOutput = try await connection.execute(command: "top -bn1 | head -5")
-                    let memOutput = try await connection.execute(command: "free -m")
+                    let cpuOutput = try connection.execute(command: "top -bn1 | head -5")
+                    let memOutput = try connection.execute(command: "free -m")
 
                     let cpu = parseCPU(cpuOutput)
                     let mem = parseMem(memOutput)

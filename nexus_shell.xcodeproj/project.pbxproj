@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		B140207CA09C53368492554F /* Pods_nexus_shell.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 13CF41A44CF8C430BE3E64D6 /* Pods_nexus_shell.framework */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		AE65EC712F98713000D13575 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -24,6 +28,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		13CF41A44CF8C430BE3E64D6 /* Pods_nexus_shell.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_nexus_shell.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		418C1AB2D1F10193491F59DC /* Pods-nexus_shell.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-nexus_shell.debug.xcconfig"; path = "Target Support Files/Pods-nexus_shell/Pods-nexus_shell.debug.xcconfig"; sourceTree = "<group>"; };
+		941FF47AFB19A94BFDCA7B55 /* Pods-nexus_shell.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-nexus_shell.release.xcconfig"; path = "Target Support Files/Pods-nexus_shell/Pods-nexus_shell.release.xcconfig"; sourceTree = "<group>"; };
 		AE65EC632F98712A00D13575 /* nexus_shell.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = nexus_shell.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AE65EC702F98713000D13575 /* nexus_shellTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = nexus_shellTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AE65EC7A2F98713000D13575 /* nexus_shellUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = nexus_shellUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -32,16 +39,22 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		AE65EC652F98712A00D13575 /* nexus_shell */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = nexus_shell;
 			sourceTree = "<group>";
 		};
 		AE65EC732F98713000D13575 /* nexus_shellTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = nexus_shellTests;
 			sourceTree = "<group>";
 		};
 		AE65EC7D2F98713000D13575 /* nexus_shellUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = nexus_shellUITests;
 			sourceTree = "<group>";
 		};
@@ -52,6 +65,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B140207CA09C53368492554F /* Pods_nexus_shell.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -72,6 +86,24 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		5FD337308C2385589E8ADCDA /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				418C1AB2D1F10193491F59DC /* Pods-nexus_shell.debug.xcconfig */,
+				941FF47AFB19A94BFDCA7B55 /* Pods-nexus_shell.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		913C6B8EF910E843ABEFD73B /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				13CF41A44CF8C430BE3E64D6 /* Pods_nexus_shell.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		AE65EC5A2F98712A00D13575 = {
 			isa = PBXGroup;
 			children = (
@@ -79,6 +111,8 @@
 				AE65EC732F98713000D13575 /* nexus_shellTests */,
 				AE65EC7D2F98713000D13575 /* nexus_shellUITests */,
 				AE65EC642F98712A00D13575 /* Products */,
+				5FD337308C2385589E8ADCDA /* Pods */,
+				913C6B8EF910E843ABEFD73B /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -99,9 +133,11 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = AE65EC842F98713000D13575 /* Build configuration list for PBXNativeTarget "nexus_shell" */;
 			buildPhases = (
+				D73AFE292C51243CC393DF75 /* [CP] Check Pods Manifest.lock */,
 				AE65EC5F2F98712A00D13575 /* Sources */,
 				AE65EC602F98712A00D13575 /* Frameworks */,
 				AE65EC612F98712A00D13575 /* Resources */,
+				5E2A4ED133C737F83CFDC270 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -225,6 +261,48 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		5E2A4ED133C737F83CFDC270 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-nexus_shell/Pods-nexus_shell-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-nexus_shell/Pods-nexus_shell-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-nexus_shell/Pods-nexus_shell-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		D73AFE292C51243CC393DF75 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-nexus_shell-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		AE65EC5F2F98712A00D13575 /* Sources */ = {
@@ -387,6 +465,7 @@
 		};
 		AE65EC852F98713000D13575 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 418C1AB2D1F10193491F59DC /* Pods-nexus_shell.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -419,6 +498,7 @@
 		};
 		AE65EC862F98713000D13575 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 941FF47AFB19A94BFDCA7B55 /* Pods-nexus_shell.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;

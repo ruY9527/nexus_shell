@@ -149,15 +149,13 @@ struct TerminalView: View {
                     ToolbarItem(placement: .topBarTrailing) {
                         HStack(spacing: DesignSystem.Spacing.sm) {
                             #if canImport(NMSSH)
-                            if activeSession?.connectionMode == .real {
-                                Button {
-                                    showingFileBrowser = true
-                                } label: {
-                                    Image(systemName: "folder")
-                                        .foregroundStyle(AppColors.accent)
-                                }
-                                .accessibilityIdentifier("terminal.fileBrowser")
+                            Button {
+                                showingFileBrowser = true
+                            } label: {
+                                Image(systemName: "folder")
+                                    .foregroundStyle(AppColors.accent)
                             }
+                            .accessibilityIdentifier("terminal.fileBrowser")
                             #endif
 
                             Button {
@@ -195,7 +193,7 @@ struct TerminalView: View {
             }
             #if canImport(NMSSH)
             .sheet(isPresented: $showingFileBrowser) {
-                if let session = activeSession, let connection = session.realSSHConnection {
+                if let session = activeSession, let connection = session.sshConnection {
                     FileBrowserView(sshConnection: connection)
                 }
             }

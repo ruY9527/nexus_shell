@@ -2,14 +2,16 @@
 //  RealSSHConnection.swift
 //  nexus_shell
 //
-//  SSH connection using Citadel library
+//  SSH connection using NMSSH library
 //
 
 import Foundation
-import Citadel
+#if canImport(NMSSH)
+import NMSSH
+#endif
 
-/// 真实 SSH 连接类 (Citadel)
-actor RealSSHConnection {
+/// 真实 SSH 连接类 (NMSSH)
+class RealSSHConnection: NSObject {
 
     // MARK: - Properties
 
@@ -19,13 +21,14 @@ actor RealSSHConnection {
     let serverId: UUID
     var config: SSHConfig
 
-    private var client: SSHClient?
+    #if canImport(NMSSH)
+    private var session: NMSSHSession?
+    private var channel: NMSSHChannel?
+    #endif
     private var _isConnected: Bool = false
     private var _currentDirectory: String = ""
     private let homeDirectory: String
     private var outputHandler: ((String) -> Void)?
-    private var shellTask: Task<Void, Never>?
-    private var ptyStdin: TTYStdinWriter?
     private var isShellActive: Bool = false
 
     // MARK: - Initialization
@@ -44,6 +47,7 @@ actor RealSSHConnection {
         self.config = config
         self.homeDirectory = "/home/\(authConfig.username)"
         self._currentDirectory = homeDirectory
+        super.init()
     }
 
     // MARK: - Connection State
@@ -58,57 +62,73 @@ actor RealSSHConnection {
 
     // MARK: - Connection Management
 
-    func connect() async throws {
+    func connect() throws {
+        #if canImport(NMSSH)
         guard !_isConnected else { return }
 
-        let handler = outputHandler
-        await MainActor.run {
-            handler?("Connecting to \(self.host):\(self.port)...\n")
+        outputHandler?("Connecting to \(self.host):\(self.port)...\n")
+
+        let newSession = NMSSHSession(host: host, port: port, andUsername: authConfig.username)
+        newSession.delegate = self
+        newSession.connect()
+
+        guard newSession.isConnected else {
+            _isConnected = false
+            throw SSHError.connectionFailed("Failed to connect to \(host):\(port)")
         }
 
-        do {
-            let settings = SSHClientSettings(
-                host: self.host,
-                port: self.port,
-                authenticationMethod: self.authConfig.citadelAuthMethod,
-                hostKeyValidator: .acceptAnything()
-            )
-
-            self.client = try await SSHClient.connect(to: settings)
-            self._isConnected = true
-            self._currentDirectory = self.homeDirectory
-
-            await MainActor.run {
-                handler?("Connection established.\n")
+        var authenticated = false
+        switch authConfig.method {
+        case .password:
+            if let password = authConfig.password {
+                authenticated = newSession.authenticate(byPassword: password)
             }
-        } catch {
-            self._isConnected = false
-            throw SSHError.connectionFailed("Failed to connect: \(error.localizedDescription)")
+        case .privateKey:
+            if let privateKey = authConfig.privateKey {
+                authenticated = newSession.authenticateBy(inMemoryPublicKey: "", privateKey: privateKey, andPassword: authConfig.passphrase)
+            }
         }
+
+        guard authenticated else {
+            _isConnected = false
+            throw SSHError.authenticationFailed("Authentication failed")
+        }
+
+        self.session = newSession
+        self.channel = newSession.channel
+        self.channel?.delegate = self
+        self._isConnected = true
+        self._currentDirectory = homeDirectory
+
+        outputHandler?("Connection established.\n")
+        #else
+        throw SSHError.connectionFailed("NMSSH module is not available. Open nexus_shell.xcworkspace and run pod install before building.")
+        #endif
     }
 
     func disconnect() {
-        shellTask?.cancel()
-        shellTask = nil
-
+        #if canImport(NMSSH)
         if isShellActive {
-            ptyStdin = nil
-            isShellActive = false
+            closeShell()
         }
 
-        client = nil
+        channel = nil
+        session?.disconnect()
+        session = nil
         _isConnected = false
 
-        let handler = outputHandler
-        Task { @MainActor in
-            handler?("Connection closed.\n")
-        }
+        outputHandler?("Connection closed.\n")
+        #else
+        _isConnected = false
+        outputHandler?("Connection closed.\n")
+        #endif
     }
 
     // MARK: - Command Execution
 
-    func execute(command: String) async throws -> String {
-        guard let client = client, _isConnected else {
+    func execute(command: String) throws -> String {
+        #if canImport(NMSSH)
+        guard let channel = channel, _isConnected else {
             throw SSHError.disconnected
         }
 
@@ -123,16 +143,20 @@ actor RealSSHConnection {
             return "\u{001B}[2J\u{001B}[H"
         }
 
-        do {
-            let output = try await client.executeCommand(trimmedCommand)
-            let handler = outputHandler
-            await MainActor.run {
-                handler?(output + "\n")
-            }
-            return output
-        } catch {
+        channel.requestPty = false
+
+        var error: NSError?
+        let result = channel.execute(trimmedCommand, error: &error)
+
+        if let error = error {
             throw SSHError.commandFailed(error.localizedDescription)
         }
+
+        outputHandler?(result + "\n")
+        return result
+        #else
+        throw SSHError.connectionFailed("NMSSH module is not available")
+        #endif
     }
 
     private func handleCDCommand(_ command: String) {
@@ -153,68 +177,55 @@ actor RealSSHConnection {
         } else {
             _currentDirectory = _currentDirectory + "/" + path
         }
+
+        #if canImport(NMSSH)
+        if let channel = channel {
+            var error: NSError?
+            channel.execute("cd \(_currentDirectory)", error: &error)
+        }
+        #endif
     }
 
     // MARK: - PTY / Shell
 
-    func startShell() async throws {
-        guard let client = client, _isConnected else {
+    func startShell() throws {
+        #if canImport(NMSSH)
+        guard let channel = channel, _isConnected else {
             throw SSHError.disconnected
         }
 
-        let handler = outputHandler
+        channel.requestPty = true
 
-        do {
-            try await client.withPTY(
-                SSHChannelRequestEvent.PseudoTerminalRequest(
-                    wantReply: true,
-                    term: "xterm-256color",
-                    terminalCharacterWidth: 80,
-                    terminalRowHeight: 24,
-                    terminalPixelWidth: 0,
-                    terminalPixelHeight: 0,
-                    terminalModes: .init([.ECHO: 1, .ICANON: 1])
-                )
-            ) { [weak self] ttyOutput, ttyStdinWriter in
-                guard let self = self else { return }
+        try channel.startShell()
 
-                Task { @MainActor [weak self] in
-                    handler?("Interactive shell started.\n")
-                }
+        isShellActive = true
 
-                Task {
-                    for try await data in ttyOutput {
-                        if let str = String(data: data, encoding: .utf8) {
-                            let h = self.outputHandler
-                            await MainActor.run {
-                                h?(str)
-                            }
-                        }
-                    }
-                }
-
-                self.ptyStdin = ttyStdinWriter
-                self.isShellActive = true
-            }
-        } catch {
-            throw SSHError.commandFailed("Failed to start shell: \(error.localizedDescription)")
-        }
+        outputHandler?("Interactive shell started.\n")
+        #else
+        throw SSHError.connectionFailed("NMSSH module is not available")
+        #endif
     }
 
     func sendInput(_ input: String) {
-        guard isShellActive, let stdin = ptyStdin else { return }
-        try? stdin.write(ByteBuffer(string: input))
+        #if canImport(NMSSH)
+        guard isShellActive, let channel = channel else { return }
+        var error: NSError?
+        channel.write(input, error: &error, timeout: NSNumber(value: 1.0))
+        #endif
     }
 
     func closeShell() {
-        ptyStdin = nil
+        #if canImport(NMSSH)
+        channel?.closeShell()
+        #endif
         isShellActive = false
-        shellTask?.cancel()
     }
 
     func resizeTerminal(width: Int, height: Int) {
-        guard isShellActive, let stdin = ptyStdin else { return }
-        try? stdin.changeSize(terminalCharacterWidth: UInt32(width), terminalRowHeight: UInt32(height))
+        #if canImport(NMSSH)
+        guard isShellActive, let channel = channel else { return }
+        channel.requestSizeWidth(UInt(width), height: UInt(height))
+        #endif
     }
 
     // MARK: - Output Handler
@@ -225,28 +236,68 @@ actor RealSSHConnection {
 
     // MARK: - Connection Quality
 
-    func sendKeepAlive() async -> Bool {
+    func sendKeepAlive() -> Bool {
         guard _isConnected else { return false }
         do {
-            let response = try await client?.executeCommand("echo keepalive")
-            return response?.contains("keepalive") ?? false
+            let response = try execute(command: "echo keepalive")
+            return response.contains("keepalive")
         } catch {
             return false
         }
     }
 
     func checkConnection() -> Bool {
-        return _isConnected
+        #if canImport(NMSSH)
+        return _isConnected && (session?.isConnected ?? false)
+        #else
+        return false
+        #endif
     }
 
     // MARK: - Reconnection
 
-    func reconnect() async throws {
+    func reconnect() throws {
         disconnect()
-        try await Task.sleep(for: .milliseconds(Int(config.reconnectDelay * 1000)))
-        try await connect()
+        Thread.sleep(forTimeInterval: config.reconnectDelay)
+        try connect()
     }
 }
+
+#if canImport(NMSSH)
+// MARK: - NMSSHSessionDelegate
+
+extension RealSSHConnection: NMSSHSessionDelegate {
+    func session(_ session: NMSSHSession, didDisconnectWithError error: Error) {
+        _isConnected = false
+        outputHandler?("Disconnected: \(error.localizedDescription)\n")
+    }
+}
+
+// MARK: - NMSSHChannelDelegate
+
+extension RealSSHConnection: NMSSHChannelDelegate {
+    func channel(_ channel: NMSSHChannel, didReadData message: String) {
+        outputHandler?(message)
+    }
+
+    func channel(_ channel: NMSSHChannel, didReadError error: String) {
+        outputHandler?(error)
+    }
+
+    func channelShellDidClose(_ channel: NMSSHChannel) {
+        isShellActive = false
+        outputHandler?("Shell closed.\n")
+    }
+}
+
+// MARK: - SFTP Support
+
+extension RealSSHConnection {
+    func getNMSSHSession() -> NMSSHSession? {
+        return session
+    }
+}
+#endif
 
 // MARK: - Connection Info
 
@@ -270,23 +321,17 @@ extension RealSSHConnection {
     }
 }
 
-// MARK: - SSHAuthConfig Extension
+// MARK: - SSHConfig Extension for NMSSH
 
-extension SSHAuthConfig {
-    var citadelAuthMethod: Citadel.AuthenticationMethod {
-        switch self.method {
-        case .password:
-            if let password = self.password {
-                return .passwordBased(username: self.username, password: password)
-            } else {
-                return .passwordBased(username: self.username, password: "")
-            }
-        case .privateKey:
-            if let privateKey = self.privateKey {
-                return .privateKeyBased(username: self.username, privateKey: privateKey, passphrase: self.passphrase ?? "")
-            } else {
-                return .passwordBased(username: self.username, password: "")
-            }
-        }
+extension SSHConfig {
+    static var defaultNMSSH: SSHConfig {
+        SSHConfig(
+            connectionTimeout: 30.0,
+            commandTimeout: 60.0,
+            autoReconnect: true,
+            maxReconnectAttempts: 5,
+            reconnectDelay: 2.0,
+            keepAliveInterval: 60.0
+        )
     }
 }

@@ -94,7 +94,6 @@ class ServerSession: ObservableObject {
         self.createdAt = Date()
         self.sshConfig = AppSettings.shared.defaultSSHConfig
 
-        // 加载持久化的命令历史
         self.commandHistory = Self.loadCommandHistory(for: server.id)
 
         outputBuffer = """
@@ -129,7 +128,7 @@ class ServerSession: ObservableObject {
         appendOutput("Connecting to \(server.host)...\n")
 
         do {
-            let connection = try await SSHClientManager.shared.createConnection(
+            let connection = try SSHClientManager.shared.createConnection(
                 host: server.host,
                 port: server.port,
                 username: server.username,
@@ -139,7 +138,7 @@ class ServerSession: ObservableObject {
             )
 
             sshConnection = connection
-            await setupConnection()
+            setupConnection()
 
         } catch {
             state = .error(error.localizedDescription)
@@ -149,10 +148,10 @@ class ServerSession: ObservableObject {
         }
     }
 
-    private func setupConnection() async {
+    private func setupConnection() {
         guard let connection = sshConnection else { return }
 
-        await connection.setOutputHandler { [weak self] output in
+        connection.setOutputHandler { [weak self] output in
             Task { @MainActor [weak self] in
                 self?.appendOutput(output)
             }
@@ -168,7 +167,7 @@ class ServerSession: ObservableObject {
         LogStore.shared.logConnection(serverId: server.id, serverName: server.name, success: true)
 
         do {
-            try await connection.startShell()
+            try connection.startShell()
             isShellActive = true
             appendOutput("Interactive shell started.\n")
         } catch {
@@ -186,13 +185,10 @@ class ServerSession: ObservableObject {
         reconnectTask?.cancel()
         reconnectTask = nil
 
-        Task {
-            await monitor.stopMonitoring(server.id)
-            if isShellActive {
-                await sshConnection?.closeShell()
-            }
-            await sshConnection?.disconnect()
+        if isShellActive {
+            sshConnection?.closeShell()
         }
+        sshConnection?.disconnect()
 
         isShellActive = false
         sshConnection = nil
@@ -221,16 +217,15 @@ class ServerSession: ObservableObject {
             Self.saveCommandHistory(commandHistory, for: server.id)
         }
 
-        Task {
-            if isShellActive {
-                sshConnection?.sendInput(command + "\n")
-            } else {
-                if let connection = sshConnection {
-                    _ = try? await connection.execute(command: command)
-                }
+        if isShellActive {
+            sshConnection?.sendInput(command + "\n")
+        } else {
+            if let connection = sshConnection {
+                _ = try? connection.execute(command: command)
             }
-            LogStore.shared.logCommand(serverId: server.id, command: command)
         }
+
+        LogStore.shared.logCommand(serverId: server.id, command: command)
 
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
@@ -238,10 +233,8 @@ class ServerSession: ObservableObject {
     func sendKeyToSession(_ key: String) {
         guard state == .connected else { return }
 
-        Task {
-            if isShellActive {
-                sshConnection?.sendInput(key)
-            }
+        if isShellActive {
+            sshConnection?.sendInput(key)
         }
     }
 
@@ -263,18 +256,18 @@ class ServerSession: ObservableObject {
 
                 guard !Task.isCancelled else { return }
 
-                await reconnect()
+                reconnect()
             } catch {
                 // Reconnect cancelled or failed
             }
         }
     }
 
-    private func reconnect() async {
+    private func reconnect() {
         do {
             if let connection = sshConnection {
-                try await connection.reconnect()
-                await setupConnection()
+                try connection.reconnect()
+                setupConnection()
             }
         } catch {
             state = .error("Reconnection failed: \(error.localizedDescription)")
@@ -289,8 +282,8 @@ class ServerSession: ObservableObject {
 
         isMonitoring = true
 
-        Task {
-            if let connection = sshConnection {
+        if let connection = sshConnection {
+            Task {
                 await monitor.startMonitoring(serverId: server.id, connection: connection)
             }
         }
@@ -303,10 +296,8 @@ class ServerSession: ObservableObject {
     }
 
     func resizeTerminal(width: Int, height: Int) {
-        Task {
-            if isShellActive, let connection = sshConnection {
-                await connection.resizeTerminal(width: width, height: height)
-            }
+        if isShellActive, let connection = sshConnection {
+            connection.resizeTerminal(width: width, height: height)
         }
     }
 
