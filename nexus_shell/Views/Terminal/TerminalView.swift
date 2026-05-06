@@ -19,6 +19,7 @@ struct TerminalView: View {
     @State private var showingBookmarkQuickPanel = false
     @State private var inputFieldId: UUID = UUID()  // 用于重建输入框
     @State private var currentDirectory: String = "/home"
+    @FocusState private var isInputFocused: Bool  // 用于控制键盘焦点
 
     private var settings: AppSettings { AppSettings.shared }
 
@@ -79,6 +80,7 @@ struct TerminalView: View {
                             }
                         }
                     )
+                    .focused($isInputFocused)
 
                     // 自动补全弹窗
                     if completionEngine.isShowingCompletions {
@@ -212,8 +214,9 @@ struct TerminalView: View {
             await session.connect()
             await MainActor.run {
                 if session.state == .connected {
-                    // 连接成功后，重建输入框以触发键盘
+                    // 连接成功后，重建输入框并触发键盘
                     inputFieldId = UUID()
+                    isInputFocused = true
                 }
             }
         }
@@ -342,9 +345,8 @@ struct CommandInputBarUIKit: UIViewRepresentable {
             // id 变化时强制获取焦点并弹出键盘
             if context.coordinator.currentId != id {
                 context.coordinator.currentId = id
-                // 使用 Task 确保在主线程执行，并等待下一个运行循环
-                Task { @MainActor in
-                    if isEnabled {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    if self.isEnabled {
                         textField.becomeFirstResponder()
                     }
                 }
