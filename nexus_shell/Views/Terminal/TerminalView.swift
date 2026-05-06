@@ -48,6 +48,7 @@ struct TerminalView: View {
                         text: $commandInput,
                         id: inputFieldId,
                         isEnabled: session.state == .connected,
+                        isFocused: isInputFocused,
                         onTextChange: { text in
                             commandInput = text
                             completionEngine.getCompletions(
@@ -80,7 +81,6 @@ struct TerminalView: View {
                             }
                         }
                     )
-                    .focused($isInputFocused)
 
                     // 自动补全弹窗
                     if completionEngine.isShowingCompletions {
@@ -260,6 +260,7 @@ struct CommandInputBarUIKit: UIViewRepresentable {
     @Binding var text: String
     let id: UUID
     let isEnabled: Bool
+    var isFocused: Bool = false  // 新增：控制焦点
     let onTextChange: (String) -> Void
     let onSubmit: (String) -> Void
     let onTabPressed: () -> Void
@@ -346,6 +347,15 @@ struct CommandInputBarUIKit: UIViewRepresentable {
             if context.coordinator.currentId != id {
                 context.coordinator.currentId = id
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    if self.isEnabled {
+                        textField.becomeFirstResponder()
+                    }
+                }
+            }
+
+            // isFocused 变化时弹出键盘
+            if isFocused && !textField.isFirstResponder && isEnabled {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                     if self.isEnabled {
                         textField.becomeFirstResponder()
                     }
