@@ -150,6 +150,7 @@ class ServerSession: ObservableObject {
             state = .error(error.localizedDescription)
             appendOutput("Connection failed: \(error.localizedDescription)\n")
             server.status = .offline
+            LogStore.shared.logConnection(serverId: server.id, serverName: server.name, success: false)
         }
     }
 
@@ -176,6 +177,7 @@ class ServerSession: ObservableObject {
         server.lastConnectedAt = Date()
         reconnectAttempts = 0
         startMonitoring()
+        LogStore.shared.logConnection(serverId: server.id, serverName: server.name, success: true)
     }
 
     private func connectWithFallback() async throws {
@@ -224,6 +226,7 @@ class ServerSession: ObservableObject {
         server.lastConnectedAt = Date()
         reconnectAttempts = 0
         startMonitoring()
+        LogStore.shared.logConnection(serverId: server.id, serverName: server.name, success: true)
     }
     #endif
 
@@ -243,6 +246,7 @@ class ServerSession: ObservableObject {
         server.lastConnectedAt = Date()
         reconnectAttempts = 0
         startMonitoring()
+        LogStore.shared.logConnection(serverId: server.id, serverName: server.name, success: true)
     }
 
     // MARK: - Disconnect
@@ -271,6 +275,7 @@ class ServerSession: ObservableObject {
         appendOutput("\nConnection closed.\n")
 
         server.status = .unknown
+        LogStore.shared.logDisconnect(serverId: server.id, serverName: server.name)
 
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
@@ -300,11 +305,13 @@ class ServerSession: ObservableObject {
                 case .real:
                     if let connection = realSSHConnection {
                         _ = try await connection.execute(command: command)
+                        LogStore.shared.logCommand(serverId: server.id, command: command)
                     }
                 #endif
                 case .simulated:
                     if let connection = simulatedSSHConnection {
                         _ = try await connection.execute(command: command)
+                        LogStore.shared.logCommand(serverId: server.id, command: command)
                     }
                 }
             } catch {

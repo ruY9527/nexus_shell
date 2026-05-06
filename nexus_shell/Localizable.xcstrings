@@ -20,6 +20,9 @@
     "%lld" : {
 
     },
+    "%lld items" : {
+
+    },
     "%lld sec" : {
 
     },
@@ -45,6 +48,12 @@
 
     },
     "About" : {
+
+    },
+    "Add Bookmark" : {
+
+    },
+    "Add bookmarks for quick access to your favorite commands" : {
 
     },
     "Add Server" : {
@@ -188,6 +197,9 @@
         }
       }
     },
+    "Bookmarks" : {
+
+    },
     "Build" : {
 
     },
@@ -241,7 +253,13 @@
     "Color" : {
 
     },
+    "Command" : {
+
+    },
     "Command Timeout" : {
+
+    },
+    "Completions" : {
 
     },
     "Connect" : {
@@ -403,6 +421,9 @@
     "Delete Server?" : {
 
     },
+    "Description" : {
+
+    },
     "Description (optional)" : {
 
     },
@@ -427,6 +448,15 @@
 
     },
     "Duration: %@" : {
+
+    },
+    "Edit" : {
+
+    },
+    "Edit Bookmark" : {
+
+    },
+    "Edit Group" : {
 
     },
     "Edit Server" : {
@@ -501,6 +531,12 @@
     "Good" : {
 
     },
+    "Group" : {
+
+    },
+    "Group Name" : {
+
+    },
     "Haptic Feedback" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -536,6 +572,12 @@
       }
     },
     "Icon" : {
+
+    },
+    "Icon & Color" : {
+
+    },
+    "If enabled, the command will be executed with sudo privileges" : {
 
     },
     "Interaction" : {
@@ -585,6 +627,9 @@
 
     },
     "Light" : {
+
+    },
+    "Load Preset Bookmarks" : {
 
     },
     "Log Entries" : {
@@ -669,7 +714,13 @@
     "Name" : {
 
     },
+    "New Bookmark" : {
+
+    },
     "New Folder" : {
+
+    },
+    "New Group" : {
 
     },
     "New Server" : {
@@ -679,6 +730,15 @@
 
     },
     "No Activity Logs" : {
+
+    },
+    "No Bookmarks" : {
+
+    },
+    "No bookmarks found" : {
+
+    },
+    "No Group" : {
 
     },
     "No Logs Available" : {
@@ -711,6 +771,9 @@
 
     },
     "No Servers Yet" : {
+
+    },
+    "None" : {
 
     },
     "Notes" : {
@@ -786,6 +849,9 @@
           }
         }
       }
+    },
+    "Permission" : {
+
     },
     "Ping Response" : {
 
@@ -864,6 +930,9 @@
     "Refresh Interval" : {
 
     },
+    "Requires Admin (sudo)" : {
+
+    },
     "Reset" : {
 
     },
@@ -905,6 +974,9 @@
     "Save Server?" : {
 
     },
+    "Search bookmarks..." : {
+
+    },
     "Search logs..." : {
 
     },
@@ -926,6 +998,12 @@
       }
     },
     "Select a server to start SSH session" : {
+
+    },
+    "Select Group" : {
+
+    },
+    "Select Icon" : {
 
     },
     "Select Server" : {
@@ -1111,6 +1189,9 @@
 
     },
     "Total" : {
+
+    },
+    "Ungrouped" : {
 
     },
     "Uptime: %@" : {
