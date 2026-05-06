@@ -85,7 +85,7 @@ class DefaultCommandEngine: CommandEngine {
             newDir = currentDirectory + "/" + path
         }
 
-        // 注意：这里返回空字符串表示成功，但实际目录变化需要调用者处理
+        setCurrentDirectory(newDir)
         return ""
     }
 
