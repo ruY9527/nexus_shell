@@ -64,44 +64,20 @@ struct ReconnectingStatusView: View {
 
 /// 连接模式指示器
 struct ConnectionModeIndicator: View {
-    let mode: ServerSession.SSHConnectionMode
-
     var body: some View {
         HStack(spacing: 4) {
             Circle()
-                .fill(modeColor)
+                .fill(AppColors.online)
                 .frame(width: 6, height: 6)
 
-            Text(modeText)
+            Text("Real SSH")
                 .font(AppTypography.labelSmall)
-                .foregroundStyle(modeColor)
+                .foregroundStyle(AppColors.online)
         }
         .padding(.horizontal, DesignSystem.Spacing.sm)
         .padding(.vertical, DesignSystem.Spacing.xs)
-        .background(modeColor.opacity(0.15))
+        .background(AppColors.online.opacity(0.15))
         .cornerRadius(DesignSystem.Radius.sm)
-    }
-
-    private var modeText: String {
-        switch mode {
-        #if canImport(NMSSH)
-        case .real:
-            return "Real SSH"
-        #endif
-        case .simulated:
-            return "Simulated"
-        }
-    }
-
-    private var modeColor: Color {
-        switch mode {
-        #if canImport(NMSSH)
-        case .real:
-            return AppColors.online
-        #endif
-        case .simulated:
-            return AppColors.warning
-        }
     }
 }
 
@@ -122,10 +98,6 @@ struct EnhancedConnectionStatusBar: View {
                     .foregroundStyle(AppColors.secondaryText)
 
                 Spacer()
-
-                if session.state == .connected {
-                    ConnectionModeIndicator(mode: session.connectionMode)
-                }
 
                 Text(statusText)
                     .font(AppTypography.labelSmall)
@@ -252,10 +224,7 @@ struct ConnectionQualityIndicator: View {
 #Preview {
     VStack(spacing: 20) {
         ReconnectingStatusView(attempt: 2, maxAttempts: 5) {}
-        #if canImport(NMSSH)
-        ConnectionModeIndicator(mode: .real)
-        #endif
-        ConnectionModeIndicator(mode: .simulated)
+        ConnectionModeIndicator()
         ReconnectingProgressBar(attempt: 3, maxAttempts: 5)
     }
     .padding()

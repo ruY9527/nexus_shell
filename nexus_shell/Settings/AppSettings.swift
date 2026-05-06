@@ -31,23 +31,13 @@ final class AppSettings {
     /// SSH 连接模式
     enum SSHModes: String, CaseIterable, Codable {
         case real = "real"
-        case simulated = "simulated"
-        case auto = "auto"
 
         var displayName: String {
-            switch self {
-            case .real: return "Real SSH"
-            case .simulated: return "Simulated"
-            case .auto: return "Auto (fallback)"
-            }
+            return "Real SSH"
         }
 
         var description: String {
-            switch self {
-            case .real: return "Use real SSH connection"
-            case .simulated: return "Use simulated commands"
-            case .auto: return "Use real SSH, fallback to simulated on failure"
-            }
+            return "Use real SSH connection"
         }
     }
 
@@ -128,7 +118,7 @@ final class AppSettings {
         get {
             guard let value = defaults.string(forKey: Keys.sshMode),
                   let mode = SSHModes(rawValue: value) else {
-                return .auto
+                return .real
             }
             return mode
         }

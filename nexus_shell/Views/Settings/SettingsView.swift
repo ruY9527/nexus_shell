@@ -59,21 +59,6 @@ struct SettingsView: View {
 
                 // SSH 连接设置
                 Section {
-                    Picker("SSH Mode", selection: $settings.sshMode) {
-                        ForEach(AppSettings.SSHModes.allCases, id: \.self) { mode in
-                            VStack(alignment: .leading) {
-                                Text(mode.displayName)
-                                Text(mode.description)
-                                    .font(AppTypography.labelSmall)
-                                    .foregroundStyle(AppColors.secondaryText)
-                            }
-                            .tag(mode)
-                        }
-                    }
-                    .onChange(of: settings.sshMode) { _, newValue in
-                        AppSettings.shared.sshMode = newValue
-                    }
-
                     HStack {
                         VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
                             Text("Connection Timeout")

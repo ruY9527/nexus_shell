@@ -2,36 +2,13 @@
 //  RealSSHConnection.swift
 //  nexus_shell
 //
-//  Created by opencode on 2026-05-03.
+//  SSH connection using Citadel library
 //
 
 import Foundation
-#if canImport(NMSSH)
-import NMSSH
-#endif
+import Citadel
 
-// MARK: - RealSSHConnection (NMSSH-based)
-
-#if canImport(NMSSH)
-
-/// Shell 输出代理
-class ShellOutputDelegate: NSObject, NMSSHChannelDelegate {
-    var onData: ((String) -> Void)?
-
-    func channel(_ channel: NMSSHChannel, didReadData message: String) {
-        onData?(message)
-    }
-
-    func channel(_ channel: NMSSHChannel, didReadError error: String) {
-        onData?(error)
-    }
-
-    func channelShellDidClose(_ channel: NMSSHChannel) {
-        // Shell closed
-    }
-}
-
-/// 真实 SSH 连接类 (NMSSH)
+/// 真实 SSH 连接类 (Citadel)
 actor RealSSHConnection {
 
     // MARK: - Properties
@@ -42,14 +19,14 @@ actor RealSSHConnection {
     let serverId: UUID
     var config: SSHConfig
 
-    private var session: NMSSHSession?
-    private var channel: NMSSHChannel?
+    private var client: SSHClient?
     private var _isConnected: Bool = false
     private var _currentDirectory: String = ""
     private let homeDirectory: String
     private var outputHandler: ((String) -> Void)?
-    private var shellStarted: Bool = false
-    private let shellDelegate = ShellOutputDelegate()
+    private var shellTask: Task<Void, Never>?
+    private var ptyStdin: TTYStdinWriter?
+    private var isShellActive: Bool = false
 
     // MARK: - Initialization
 
@@ -72,7 +49,7 @@ actor RealSSHConnection {
     // MARK: - Connection State
 
     var isConnected: Bool {
-        _isConnected && (session?.isConnected ?? false)
+        _isConnected
     }
 
     var currentDirectory: String {
@@ -82,7 +59,7 @@ actor RealSSHConnection {
     // MARK: - Connection Management
 
     func connect() async throws {
-        guard !isConnected else { return }
+        guard !_isConnected else { return }
 
         let handler = outputHandler
         await MainActor.run {
@@ -90,76 +67,37 @@ actor RealSSHConnection {
         }
 
         do {
-            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                DispatchQueue.global(qos: .userInitiated).async { [self] in
-                    let session = NMSSHSession(host: self.host, andUsername: self.authConfig.username)
+            let settings = SSHClientSettings(
+                host: self.host,
+                port: self.port,
+                authenticationMethod: self.authConfig.citadelAuthMethod,
+                hostKeyValidator: .acceptAnything()
+            )
 
-                    guard session.connect() else {
-                        continuation.resume(throwing: SSHError.connectionFailed("Cannot connect to \(self.host):\(self.port)"))
-                        return
-                    }
+            self.client = try await SSHClient.connect(to: settings)
+            self._isConnected = true
+            self._currentDirectory = self.homeDirectory
 
-                    self.session = session
-                    self.channel = session.channel
-
-                    do {
-                        try self.authenticate(session: session)
-                        self._isConnected = true
-                        self._currentDirectory = self.homeDirectory
-                        continuation.resume()
-                    } catch {
-                        continuation.resume(throwing: error)
-                    }
-                }
+            await MainActor.run {
+                handler?("Connection established.\n")
             }
         } catch {
-            _isConnected = false
-            throw error
-        }
-
-        let handler2 = outputHandler
-        await MainActor.run {
-            handler2?("Connection established.\n")
-        }
-    }
-
-    private func authenticate(session: NMSSHSession) throws {
-        var authenticated = false
-
-        switch authConfig.method {
-        case .password:
-            if let password = authConfig.password {
-                authenticated = session.authenticate(byPassword: password)
-            } else {
-                throw SSHError.authenticationFailed("Password not provided")
-            }
-
-        case .privateKey:
-            if let privateKey = authConfig.privateKey {
-                let passphrase = authConfig.passphrase
-                authenticated = session.authenticateBy(inMemoryPublicKey: "", privateKey: privateKey, andPassword: passphrase)
-            } else {
-                throw SSHError.authenticationFailed("Private key not provided")
-            }
-        }
-
-        guard authenticated else {
-            throw SSHError.authenticationFailed("Authentication failed for user \(authConfig.username)")
+            self._isConnected = false
+            throw SSHError.connectionFailed("Failed to connect: \(error.localizedDescription)")
         }
     }
 
     func disconnect() {
-        guard let session = session else { return }
+        shellTask?.cancel()
+        shellTask = nil
 
-        if shellStarted {
-            channel?.closeShell()
-            shellStarted = false
+        if isShellActive {
+            ptyStdin = nil
+            isShellActive = false
         }
 
-        session.disconnect()
+        client = nil
         _isConnected = false
-        self.session = nil
-        self.channel = nil
 
         let handler = outputHandler
         Task { @MainActor in
@@ -170,7 +108,7 @@ actor RealSSHConnection {
     // MARK: - Command Execution
 
     func execute(command: String) async throws -> String {
-        guard isConnected, let channel = channel else {
+        guard let client = client, _isConnected else {
             throw SSHError.disconnected
         }
 
@@ -185,24 +123,15 @@ actor RealSSHConnection {
             return "\u{001B}[2J\u{001B}[H"
         }
 
-        let handler = outputHandler
-
-        return try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                var err: NSError?
-                let response = channel.execute(trimmedCommand, error: &err)
-
-                if let err = err {
-                    continuation.resume(throwing: SSHError.commandFailed(err.localizedDescription))
-                    return
-                }
-
-                let output = response
-                DispatchQueue.main.async {
-                    handler?(output)
-                }
-                continuation.resume(returning: output)
+        do {
+            let output = try await client.executeCommand(trimmedCommand)
+            let handler = outputHandler
+            await MainActor.run {
+                handler?(output + "\n")
             }
+            return output
+        } catch {
+            throw SSHError.commandFailed(error.localizedDescription)
         }
     }
 
@@ -229,47 +158,63 @@ actor RealSSHConnection {
     // MARK: - PTY / Shell
 
     func startShell() async throws {
-        guard isConnected, let channel = channel else {
+        guard let client = client, _isConnected else {
             throw SSHError.disconnected
         }
 
-        channel.requestPty = true
-        channel.ptyTerminalType = config.terminalType.nmsshPtyType
-
         let handler = outputHandler
-        shellDelegate.onData = { data in
-            Task { @MainActor in
-                handler?(data)
-            }
-        }
-        channel.delegate = shellDelegate
 
         do {
-            try channel.startShell()
+            try await client.withPTY(
+                SSHChannelRequestEvent.PseudoTerminalRequest(
+                    wantReply: true,
+                    term: "xterm-256color",
+                    terminalCharacterWidth: 80,
+                    terminalRowHeight: 24,
+                    terminalPixelWidth: 0,
+                    terminalPixelHeight: 0,
+                    terminalModes: .init([.ECHO: 1, .ICANON: 1])
+                )
+            ) { [weak self] ttyOutput, ttyStdinWriter in
+                guard let self = self else { return }
+
+                Task { @MainActor [weak self] in
+                    handler?("Interactive shell started.\n")
+                }
+
+                Task {
+                    for try await data in ttyOutput {
+                        if let str = String(data: data, encoding: .utf8) {
+                            let h = self.outputHandler
+                            await MainActor.run {
+                                h?(str)
+                            }
+                        }
+                    }
+                }
+
+                self.ptyStdin = ttyStdinWriter
+                self.isShellActive = true
+            }
         } catch {
             throw SSHError.commandFailed("Failed to start shell: \(error.localizedDescription)")
-        }
-
-        shellStarted = true
-
-        await MainActor.run {
-            handler?("Interactive shell started.\n")
         }
     }
 
     func sendInput(_ input: String) {
-        guard shellStarted, let channel = channel else { return }
-        try? channel.write(input)
+        guard isShellActive, let stdin = ptyStdin else { return }
+        try? stdin.write(ByteBuffer(string: input))
     }
 
     func closeShell() {
-        shellStarted = false
-        channel?.closeShell()
+        ptyStdin = nil
+        isShellActive = false
+        shellTask?.cancel()
     }
 
     func resizeTerminal(width: Int, height: Int) {
-        guard shellStarted, let channel = channel else { return }
-        _ = channel.requestSizeWidth(UInt(width), height: UInt(height))
+        guard isShellActive, let stdin = ptyStdin else { return }
+        try? stdin.changeSize(terminalCharacterWidth: UInt32(width), terminalRowHeight: UInt32(height))
     }
 
     // MARK: - Output Handler
@@ -278,26 +223,20 @@ actor RealSSHConnection {
         self.outputHandler = handler
     }
 
-    // MARK: - SFTP Support
-
-    func getNMSSHSession() -> NMSSHSession? {
-        return session
-    }
-
     // MARK: - Connection Quality
 
     func sendKeepAlive() async -> Bool {
-        guard isConnected else { return false }
+        guard _isConnected else { return false }
         do {
-            let response = try await execute(command: "echo keepalive")
-            return response.contains("keepalive")
+            let response = try await client?.executeCommand("echo keepalive")
+            return response?.contains("keepalive") ?? false
         } catch {
             return false
         }
     }
 
     func checkConnection() -> Bool {
-        return isConnected
+        return _isConnected
     }
 
     // MARK: - Reconnection
@@ -306,28 +245,6 @@ actor RealSSHConnection {
         disconnect()
         try await Task.sleep(for: .milliseconds(Int(config.reconnectDelay * 1000)))
         try await connect()
-    }
-
-    func reconnectWithRetry() async throws {
-        var attempts = 0
-        while attempts < config.maxReconnectAttempts {
-            attempts += 1
-            do {
-                try await reconnect()
-                return
-            } catch {
-                let handler = outputHandler
-                let maxAttempts = config.maxReconnectAttempts
-                await MainActor.run {
-                    handler?("Reconnect attempt \(attempts)/\(maxAttempts) failed: \(error.localizedDescription)\n")
-                }
-                if attempts < config.maxReconnectAttempts {
-                    let delay = config.reconnectDelay * Double(attempts)
-                    try await Task.sleep(for: .seconds(delay))
-                }
-            }
-        }
-        throw SSHError.connectionFailed("Failed to reconnect after \(config.maxReconnectAttempts) attempts")
     }
 }
 
@@ -339,7 +256,7 @@ extension RealSSHConnection {
             host: host,
             port: port,
             username: authConfig.username,
-            isConnected: isConnected,
+            isConnected: _isConnected,
             currentDirectory: _currentDirectory
         )
     }
@@ -353,4 +270,23 @@ extension RealSSHConnection {
     }
 }
 
-#endif
+// MARK: - SSHAuthConfig Extension
+
+extension SSHAuthConfig {
+    var citadelAuthMethod: Citadel.AuthenticationMethod {
+        switch self.method {
+        case .password:
+            if let password = self.password {
+                return .passwordBased(username: self.username, password: password)
+            } else {
+                return .passwordBased(username: self.username, password: "")
+            }
+        case .privateKey:
+            if let privateKey = self.privateKey {
+                return .privateKeyBased(username: self.username, privateKey: privateKey, passphrase: self.passphrase ?? "")
+            } else {
+                return .passwordBased(username: self.username, password: "")
+            }
+        }
+    }
+}

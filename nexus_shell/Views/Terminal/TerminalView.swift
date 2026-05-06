@@ -460,10 +460,6 @@ struct ConnectionStatusBar: View {
 
                 Spacer()
 
-                if session.state == .connected {
-                    ConnectionModeIndicator(mode: session.connectionMode)
-                }
-
                 Text(statusText)
                     .font(AppTypography.labelSmall)
                     .foregroundStyle(statusColor)

@@ -2,7 +2,7 @@
 //  ServerSession.swift
 //  nexus_shell
 //
-//  Created by baoyang on 2026/4/22.
+//  SSH Session Manager
 //
 
 import Foundation
@@ -64,7 +64,7 @@ class ServerSession: ObservableObject {
     @Published var state: SessionState = .disconnected
     @Published var outputBuffer: String = ""
     @Published var commandHistory: [String] = []
-    @Published var connectionMode: SSHConnectionMode = .simulated
+    @Published var isShellActive: Bool = false
 
     let createdAt: Date
 
@@ -75,14 +75,10 @@ class ServerSession: ObservableObject {
         static let commandHistoryLimit = 100
     }
 
-    #if canImport(NMSSH)
-    private(set) var realSSHConnection: RealSSHConnection?
-    #endif
-    private var simulatedSSHConnection: SSHConnection?
+    private(set) var sshConnection: RealSSHConnection?
 
     private let monitor = ServerMonitor()
     @Published var isMonitoring: Bool = false
-    @Published var isShellActive: Bool = false  // Shell 模式状态
 
     private var sshConfig: SSHConfig
     private var reconnectTask: Task<Void, Never>?
@@ -91,13 +87,6 @@ class ServerSession: ObservableObject {
     /// 命令历史持久化键
     private var commandHistoryKey: String {
         "commandHistory_\(server.id.uuidString)"
-    }
-
-    enum SSHConnectionMode {
-        #if canImport(NMSSH)
-        case real
-        #endif
-        case simulated
     }
 
     init(server: Server) {
@@ -140,50 +129,7 @@ class ServerSession: ObservableObject {
         appendOutput("Connecting to \(server.host)...\n")
 
         do {
-            let mode = AppSettings.shared.sshMode
-
-            if mode == .simulated {
-                try await connectSimulated()
-            } else {
-                try await connectWithFallback()
-            }
-        } catch {
-            state = .error(error.localizedDescription)
-            appendOutput("Connection failed: \(error.localizedDescription)\n")
-            server.status = .offline
-            LogStore.shared.logConnection(serverId: server.id, serverName: server.name, success: false)
-        }
-    }
-
-    private func connectSimulated() async throws {
-        simulatedSSHConnection = try await SSHClientManager.shared.createConnection(
-            host: server.host,
-            port: server.port,
-            username: server.username,
-            authMethod: server.authMethod,
-            serverId: server.id
-        )
-
-        await simulatedSSHConnection?.setOutputHandler { [weak self] output in
-            Task { @MainActor [weak self] in
-                self?.appendOutput(output)
-            }
-        }
-
-        state = .connected
-        connectionMode = .simulated
-        appendOutput("Connected (Simulated Mode).\n")
-
-        server.status = .online
-        server.lastConnectedAt = Date()
-        reconnectAttempts = 0
-        startMonitoring()
-        LogStore.shared.logConnection(serverId: server.id, serverName: server.name, success: true)
-    }
-
-    private func connectWithFallback() async throws {
-        do {
-            let mode = try await SSHClientManager.shared.createConnection(
+            let connection = try await SSHClientManager.shared.createConnection(
                 host: server.host,
                 port: server.port,
                 username: server.username,
@@ -192,27 +138,19 @@ class ServerSession: ObservableObject {
                 config: sshConfig
             )
 
-            switch mode {
-            #if canImport(NMSSH)
-            case .real(let connection):
-                realSSHConnection = connection
-                connectionMode = .real
-                await setupRealConnection()
-            #endif
-            case .simulated(let connection):
-                simulatedSSHConnection = connection
-                connectionMode = .simulated
-                await setupSimulatedConnection()
-            }
+            sshConnection = connection
+            await setupConnection()
+
         } catch {
-            appendOutput("Real SSH connection failed, trying simulated mode...\n")
-            try await connectSimulated()
+            state = .error(error.localizedDescription)
+            appendOutput("Connection failed: \(error.localizedDescription)\n")
+            server.status = .offline
+            LogStore.shared.logConnection(serverId: server.id, serverName: server.name, success: false)
         }
     }
 
-    #if canImport(NMSSH)
-    private func setupRealConnection() async {
-        guard let connection = realSSHConnection else { return }
+    private func setupConnection() async {
+        guard let connection = sshConnection else { return }
 
         await connection.setOutputHandler { [weak self] output in
             Task { @MainActor [weak self] in
@@ -238,26 +176,6 @@ class ServerSession: ObservableObject {
             appendOutput("Falling back to command execution mode.\n")
         }
     }
-    #endif
-
-    private func setupSimulatedConnection() async {
-        guard let connection = simulatedSSHConnection else { return }
-
-        await connection.setOutputHandler { [weak self] output in
-            Task { @MainActor [weak self] in
-                self?.appendOutput(output)
-            }
-        }
-
-        state = .connected
-        appendOutput("Connected (Simulated Mode).\n")
-
-        server.status = .online
-        server.lastConnectedAt = Date()
-        reconnectAttempts = 0
-        startMonitoring()
-        LogStore.shared.logConnection(serverId: server.id, serverName: server.name, success: true)
-    }
 
     // MARK: - Disconnect
 
@@ -270,21 +188,14 @@ class ServerSession: ObservableObject {
 
         Task {
             await monitor.stopMonitoring(server.id)
-            #if canImport(NMSSH)
             if isShellActive {
-                await realSSHConnection?.closeShell()
+                await sshConnection?.closeShell()
             }
-            await realSSHConnection?.disconnect()
-            #endif
-            await simulatedSSHConnection?.disconnect()
+            await sshConnection?.disconnect()
         }
 
         isShellActive = false
-
-        #if canImport(NMSSH)
-        realSSHConnection = nil
-        #endif
-        simulatedSSHConnection = nil
+        sshConnection = nil
 
         state = .disconnected
         appendOutput("\nConnection closed.\n")
@@ -311,29 +222,14 @@ class ServerSession: ObservableObject {
         }
 
         Task {
-            do {
-                switch connectionMode {
-                #if canImport(NMSSH)
-                case .real:
-                    if let connection = realSSHConnection {
-                        if isShellActive {
-                            connection.sendInput(command + "\n")
-                        } else {
-                            _ = try await connection.execute(command: command)
-                        }
-                        LogStore.shared.logCommand(serverId: server.id, command: command)
-                    }
-                #endif
-                case .simulated:
-                    if let connection = simulatedSSHConnection {
-                        _ = try await connection.execute(command: command)
-                        LogStore.shared.logCommand(serverId: server.id, command: command)
-                    }
+            if isShellActive {
+                sshConnection?.sendInput(command + "\n")
+            } else {
+                if let connection = sshConnection {
+                    _ = try? await connection.execute(command: command)
                 }
-            } catch {
-                appendOutput("Error: \(error.localizedDescription)\n")
-                await handleConnectionError(error)
             }
+            LogStore.shared.logCommand(serverId: server.id, command: command)
         }
 
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -343,11 +239,9 @@ class ServerSession: ObservableObject {
         guard state == .connected else { return }
 
         Task {
-            #if canImport(NMSSH)
-            if connectionMode == .real, let connection = realSSHConnection, isShellActive {
-                connection.sendInput(key)
+            if isShellActive {
+                sshConnection?.sendInput(key)
             }
-            #endif
         }
     }
 
@@ -378,19 +272,9 @@ class ServerSession: ObservableObject {
 
     private func reconnect() async {
         do {
-            switch connectionMode {
-            #if canImport(NMSSH)
-            case .real:
-                if let connection = realSSHConnection {
-                    try await connection.reconnect()
-                    await setupRealConnection()
-                }
-            #endif
-            case .simulated:
-                if let connection = simulatedSSHConnection {
-                    try await connection.connect()
-                    await setupSimulatedConnection()
-                }
+            if let connection = sshConnection {
+                try await connection.reconnect()
+                await setupConnection()
             }
         } catch {
             state = .error("Reconnection failed: \(error.localizedDescription)")
@@ -406,17 +290,8 @@ class ServerSession: ObservableObject {
         isMonitoring = true
 
         Task {
-            switch connectionMode {
-            #if canImport(NMSSH)
-            case .real:
-                if let connection = realSSHConnection {
-                    await monitor.startMonitoring(serverId: server.id, realConnection: connection)
-                }
-            #endif
-            case .simulated:
-                if let connection = simulatedSSHConnection {
-                    await monitor.startMonitoring(serverId: server.id, simulatedConnection: connection)
-                }
+            if let connection = sshConnection {
+                await monitor.startMonitoring(serverId: server.id, connection: connection)
             }
         }
     }
@@ -429,11 +304,9 @@ class ServerSession: ObservableObject {
 
     func resizeTerminal(width: Int, height: Int) {
         Task {
-            #if canImport(NMSSH)
-            if connectionMode == .real, let connection = realSSHConnection, isShellActive {
+            if isShellActive, let connection = sshConnection {
                 await connection.resizeTerminal(width: width, height: height)
             }
-            #endif
         }
     }
 
@@ -467,7 +340,6 @@ class ServerSession: ObservableObject {
     /// 保存命令历史
     private static func saveCommandHistory(_ history: [String], for serverId: UUID) {
         let key = "commandHistory_\(serverId.uuidString)"
-        // 保留最近 100 条命令历史
         let trimmedHistory = Array(history.suffix(100))
         UserDefaults.standard.set(trimmedHistory, forKey: key)
     }
