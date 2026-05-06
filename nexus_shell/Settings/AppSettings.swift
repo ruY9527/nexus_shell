@@ -178,7 +178,7 @@ final class AppSettings {
             defaults.set("system", forKey: Keys.language)
         }
         if defaults.object(forKey: Keys.sshMode) == nil {
-            defaults.set(SSHModes.auto.rawValue, forKey: Keys.sshMode)
+            defaults.set(SSHModes.real.rawValue, forKey: Keys.sshMode)
         }
     }
 
@@ -197,7 +197,7 @@ final class AppSettings {
         defaults.set(14, forKey: Keys.terminalFontSize)
         defaults.set("dark", forKey: Keys.colorScheme)
         defaults.set("system", forKey: Keys.language)
-        defaults.set(SSHModes.auto.rawValue, forKey: Keys.sshMode)
+        defaults.set(SSHModes.real.rawValue, forKey: Keys.sshMode)
         defaults.removeObject(forKey: Keys.defaultSSHConfig)
 
         notifyChange()
