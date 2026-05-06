@@ -82,6 +82,7 @@ class ServerSession: ObservableObject {
 
     private let monitor = ServerMonitor()
     @Published var isMonitoring: Bool = false
+    @Published var isShellActive: Bool = false  // Shell 模式状态
 
     private var sshConfig: SSHConfig
     private var reconnectTask: Task<Void, Never>?
@@ -227,6 +228,15 @@ class ServerSession: ObservableObject {
         reconnectAttempts = 0
         startMonitoring()
         LogStore.shared.logConnection(serverId: server.id, serverName: server.name, success: true)
+
+        do {
+            try await connection.startShell()
+            isShellActive = true
+            appendOutput("Interactive shell started.\n")
+        } catch {
+            appendOutput("Warning: Failed to start interactive shell: \(error.localizedDescription)\n")
+            appendOutput("Falling back to command execution mode.\n")
+        }
     }
     #endif
 
@@ -261,10 +271,15 @@ class ServerSession: ObservableObject {
         Task {
             await monitor.stopMonitoring(server.id)
             #if canImport(NMSSH)
+            if isShellActive {
+                await realSSHConnection?.closeShell()
+            }
             await realSSHConnection?.disconnect()
             #endif
             await simulatedSSHConnection?.disconnect()
         }
+
+        isShellActive = false
 
         #if canImport(NMSSH)
         realSSHConnection = nil
@@ -292,11 +307,8 @@ class ServerSession: ObservableObject {
             let trimmedCommand = command.trimmingCharacters(in: .newlines)
             commandHistory.append(trimmedCommand)
 
-            // 保存命令历史到 UserDefaults
             Self.saveCommandHistory(commandHistory, for: server.id)
         }
-
-        appendOutput("$ " + command.trimmingCharacters(in: .whitespacesAndNewlines) + "\n")
 
         Task {
             do {
@@ -304,7 +316,11 @@ class ServerSession: ObservableObject {
                 #if canImport(NMSSH)
                 case .real:
                     if let connection = realSSHConnection {
-                        _ = try await connection.execute(command: command)
+                        if isShellActive {
+                            connection.sendInput(command + "\n")
+                        } else {
+                            _ = try await connection.execute(command: command)
+                        }
                         LogStore.shared.logCommand(serverId: server.id, command: command)
                     }
                 #endif
@@ -321,6 +337,18 @@ class ServerSession: ObservableObject {
         }
 
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+
+    func sendKeyToSession(_ key: String) {
+        guard state == .connected else { return }
+
+        Task {
+            #if canImport(NMSSH)
+            if connectionMode == .real, let connection = realSSHConnection, isShellActive {
+                connection.sendInput(key)
+            }
+            #endif
+        }
     }
 
     // MARK: - Reconnection
@@ -397,6 +425,16 @@ class ServerSession: ObservableObject {
 
     func clearTerminal() {
         outputBuffer = ""
+    }
+
+    func resizeTerminal(width: Int, height: Int) {
+        Task {
+            #if canImport(NMSSH)
+            if connectionMode == .real, let connection = realSSHConnection, isShellActive {
+                await connection.resizeTerminal(width: width, height: height)
+            }
+            #endif
+        }
     }
 
     private func appendOutput(_ text: String) {
