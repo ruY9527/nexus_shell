@@ -16,6 +16,7 @@ struct TerminalView: View {
     @State private var commandInput: String = ""
     @State private var showingQuickCommands = false
     @State private var showingFileBrowser = false
+    @State private var showingBookmarkQuickPanel = false
     @State private var inputFieldId: UUID = UUID()  // 用于重建输入框
     @State private var currentDirectory: String = "/home"
 
@@ -96,6 +97,21 @@ struct TerminalView: View {
                         .transition(.opacity.combined(with: .scale(scale: 0.95)))
                     }
 
+                    // 书签快速访问面板
+                    if showingBookmarkQuickPanel {
+                        BookmarkQuickPanel(
+                            onExecute: { bookmark in
+                                executeCommand(bookmark.command)
+                            },
+                            onDismiss: {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    showingBookmarkQuickPanel = false
+                                }
+                            }
+                        )
+                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                    }
+
                     // 工具栏
                     TerminalToolbarView(
                         showingQuickCommands: $showingQuickCommands,
@@ -151,6 +167,16 @@ struct TerminalView: View {
                                     .foregroundStyle(AppColors.accent)
                             }
                             .accessibilityIdentifier("terminal.quickCommands")
+
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    showingBookmarkQuickPanel.toggle()
+                                }
+                            } label: {
+                                Image(systemName: showingBookmarkQuickPanel ? "bookmark.fill" : "bookmark")
+                                    .foregroundStyle(showingBookmarkQuickPanel ? AppColors.accent : AppColors.primaryText)
+                            }
+                            .accessibilityIdentifier("terminal.bookmarkQuickPanel")
                         }
                     }
 
