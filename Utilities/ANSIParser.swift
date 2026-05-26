@@ -50,22 +50,32 @@ struct ANSIParser {
         var lines: [TerminalLine] = []
         let normalized = input
             .replacingOccurrences(of: "\r\n", with: "\n")
-            .replacingOccurrences(of: "\r", with: "\n")
-        let components = normalized.components(separatedBy: "\n")
 
-        for component in components {
-            let spans = parseANSI(component)
-            let attributedString = buildAttributedString(from: spans)
-            let rawText = spans.map(\.text).joined()
-
-            let line = TerminalLine(
-                attributedString: attributedString,
-                rawText: rawText
-            )
-            lines.append(line)
+        // Handle carriage returns: \r overwrites the current line
+        var currentLine = ""
+        for char in normalized {
+            if char == "\n" {
+                lines.append(buildTerminalLine(currentLine))
+                currentLine = ""
+            } else if char == "\r" {
+                // Carriage return: discard current line content, start overwrite
+                currentLine = ""
+            } else {
+                currentLine.append(char)
+            }
+        }
+        if !currentLine.isEmpty {
+            lines.append(buildTerminalLine(currentLine))
         }
 
         return lines
+    }
+
+    private static func buildTerminalLine(_ text: String) -> TerminalLine {
+        let spans = parseANSI(text)
+        let attributedString = buildAttributedString(from: spans)
+        let rawText = spans.map(\.text).joined()
+        return TerminalLine(attributedString: attributedString, rawText: rawText)
     }
 
     static func parseANSI(_ input: String) -> [ANSISpan] {

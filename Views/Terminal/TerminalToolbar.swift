@@ -37,6 +37,7 @@ struct TerminalToolbar: View {
                     }
 
                 Button {
+                    HapticManager.impact(.medium)
                     viewModel.sendCommand(viewModel.currentInput)
                 } label: {
                     Image(systemName: "arrow.up.circle.fill")
@@ -60,7 +61,10 @@ struct SpecialKeyButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            HapticManager.impact(.light)
+            action()
+        } label: {
             Text(key.displayName)
                 .font(.system(.caption, design: .monospaced))
                 .fontWeight(.medium)

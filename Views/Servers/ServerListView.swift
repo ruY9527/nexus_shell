@@ -183,7 +183,10 @@ struct ServerListRow: View {
     var body: some View {
         ServerRowView(server: server)
             .contentShape(Rectangle())
-            .onTapGesture(perform: onSelect)
+            .onTapGesture {
+                HapticManager.selection()
+                onSelect()
+            }
             .swipeActions(edge: .trailing) {
                 Button(role: .destructive, action: onDelete) {
                     Label("Delete", systemImage: "trash")

@@ -3,9 +3,11 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
     @State private var selectedTab: Tab = .servers
     @State private var isUnlocked: Bool = false
     @State private var showBiometric: Bool = false
+    @State private var backgroundTime: Date?
 
     enum Tab: String, CaseIterable {
         case servers = "Servers"
@@ -42,6 +44,26 @@ struct ContentView: View {
         }
         .onAppear {
             checkBiometricLock()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            let biometricEnabled = UserDefaults.standard.bool(forKey: "biometric_enabled")
+            guard biometricEnabled else { return }
+
+            if newPhase == .background {
+                backgroundTime = Date()
+            } else if newPhase == .active {
+                let timeout = UserDefaults.standard.double(forKey: "auto_lock_timeout")
+                if timeout == 0 { return } // "Never" selected
+
+                if let backgroundTime {
+                    let elapsed = Date().timeIntervalSince(backgroundTime)
+                    if elapsed >= timeout {
+                        isUnlocked = false
+                        checkBiometricLock()
+                    }
+                }
+                backgroundTime = nil
+            }
         }
     }
 
@@ -117,6 +139,9 @@ struct LockScreenView: View {
 }
 
 struct TerminalPlaceholderView: View {
+    @Environment(\.modelContext) private var modelContext
+    @State private var recentServers: [Server] = []
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
@@ -133,9 +158,62 @@ struct TerminalPlaceholderView: View {
                     .foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
+
+                if !recentServers.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Recent Connections")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        ForEach(recentServers) { server in
+                            NavigationLink {
+                                TerminalView(server: server)
+                            } label: {
+                                HStack(spacing: 12) {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color(hex: server.color))
+                                        .frame(width: 36, height: 36)
+                                        .overlay {
+                                            Image(systemName: "server.rack")
+                                                .foregroundStyle(.white)
+                                                .font(.caption)
+                                        }
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(server.name)
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                        Text(server.displayAddress)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+
+                                    Spacer()
+
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                }
+                                .padding(.vertical, 4)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.top, 8)
+                    .padding(.horizontal)
+                }
             }
             .navigationTitle("Terminal")
+            .onAppear { loadRecentServers() }
         }
+    }
+
+    private func loadRecentServers() {
+        let descriptor = FetchDescriptor<Server>(
+            predicate: #Predicate { $0.lastConnected != nil },
+            sortBy: [SortDescriptor(\.lastConnected, order: .reverse)]
+        )
+        recentServers = (try? modelContext.fetch(descriptor).prefix(5).map { $0 }) ?? []
     }
 }
 

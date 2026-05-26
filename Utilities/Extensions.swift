@@ -30,9 +30,19 @@ extension Color {
 
     var hexString: String {
         guard let components = UIColor(self).cgColor.components else { return "#000000" }
-        let r = Int(components[0] * 255)
-        let g = Int(components[1] * 255)
-        let b = Int(components[2] * 255)
+        let r: Int
+        let g: Int
+        let b: Int
+        if components.count >= 3 {
+            r = Int(components[0] * 255)
+            g = Int(components[1] * 255)
+            b = Int(components[2] * 255)
+        } else {
+            let gray = Int(components[0] * 255)
+            r = gray
+            g = gray
+            b = gray
+        }
         return String(format: "#%02X%02X%02X", r, g, b)
     }
 }
@@ -74,10 +84,22 @@ extension View {
             .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
     }
 
-    func hapticFeedback(_ style: UIImpactFeedbackGenerator.FeedbackStyle = .light) -> some View {
-        self.onTapGesture {
-            UIImpactFeedbackGenerator(style: style).impactOccurred()
-        }
+}
+
+enum HapticManager {
+    static func impact(_ style: UIImpactFeedbackGenerator.FeedbackStyle = .light) {
+        guard UserDefaults.standard.bool(forKey: "haptic_feedback") else { return }
+        UIImpactFeedbackGenerator(style: style).impactOccurred()
+    }
+
+    static func notification(_ type: UINotificationFeedbackGenerator.FeedbackType) {
+        guard UserDefaults.standard.bool(forKey: "haptic_feedback") else { return }
+        UINotificationFeedbackGenerator().notificationOccurred(type)
+    }
+
+    static func selection() {
+        guard UserDefaults.standard.bool(forKey: "haptic_feedback") else { return }
+        UISelectionFeedbackGenerator().selectionChanged()
     }
 }
 

@@ -14,13 +14,22 @@ final class TerminalViewModel {
     private let sshService: SSHService
     private let keychainService: KeychainService
     private let historyService: CommandHistoryService?
+    private var modelContext: ModelContext?
     private var commandHistory: [String] = []
     private var startTime: Date?
 
     init(server: Server, modelContext: ModelContext? = nil) {
         self.server = server
-        self.sshService = SSHService()
+        let defaults = UserDefaults.standard
+        let connectionTimeout = defaults.double(forKey: "ssh_connection_timeout")
+        let commandTimeout = defaults.double(forKey: "ssh_command_timeout")
+        let config = SSHService.SSHConfig(
+            connectionTimeout: connectionTimeout > 0 ? connectionTimeout : 10.0,
+            commandTimeout: commandTimeout > 0 ? commandTimeout : 30.0
+        )
+        self.sshService = SSHService(config: config)
         self.keychainService = KeychainService.shared
+        self.modelContext = modelContext
         self.historyService = modelContext.map { CommandHistoryService(modelContext: $0) }
     }
 
@@ -49,7 +58,10 @@ final class TerminalViewModel {
     }
 
     var quickCommands: [QuickCommand] {
-        QuickCommand.defaultCommands
+        guard let modelContext else { return QuickCommand.defaultCommands }
+        let descriptor = FetchDescriptor<QuickCommand>(sortBy: [SortDescriptor(\.sortOrder)])
+        let saved = (try? modelContext.fetch(descriptor)) ?? []
+        return saved.isEmpty ? QuickCommand.defaultCommands : saved
     }
 
     func connect() async {
@@ -59,6 +71,7 @@ final class TerminalViewModel {
         do {
             var password: String?
             var privateKeyPath: String?
+            var tempKeyURL: URL?
 
             if server.authMethod == .password {
                 password = try keychainService.getPassword(for: server.id)
@@ -67,11 +80,22 @@ final class TerminalViewModel {
                     let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(server.id.uuidString)_key")
                     try keyData.write(to: tempURL)
                     privateKeyPath = tempURL.path
+                    tempKeyURL = tempURL
                 }
             }
 
             try await sshService.connect(to: server, password: password, privateKeyPath: privateKeyPath)
+
+            // Clean up temp key file immediately after connection
+            if let tempKeyURL {
+                try? FileManager.default.removeItem(at: tempKeyURL)
+            }
+
             isConnected = true
+            HapticManager.notification(.success)
+
+            server.lastConnected = Date()
+            try? modelContext?.save()
 
             buffer.appendOutput(String(localized: "Connected to \(server.displayAddress)\n", comment: "Terminal connection message"))
             buffer.appendOutput(String(localized: "Last login: \(Date().shortFormatted)\n\n", comment: "Terminal last login message"))
@@ -79,6 +103,7 @@ final class TerminalViewModel {
             try await startShell()
         } catch {
             errorMessage = error.localizedDescription
+            HapticManager.notification(.error)
             buffer.appendOutput(String(localized: "Connection failed: \(error.localizedDescription)\n", comment: "Terminal error message"))
         }
 

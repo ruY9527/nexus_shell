@@ -176,15 +176,22 @@ final class SSHService: NSObject, @unchecked Sendable {
             lastError = "Shell not connected"
             return
         }
-        var error: NSError?
-        let success = shellChannel.write(input, error: &error, timeout: NSNumber(value: 5))
-        if !success || error != nil {
-            lastError = error?.localizedDescription ?? "Write failed"
+        DispatchQueue.global(qos: .userInitiated).async {
+            var error: NSError?
+            let success = shellChannel.write(input, error: &error, timeout: NSNumber(value: 5))
+            if !success || error != nil {
+                DispatchQueue.main.async { [weak self] in
+                    self?.lastError = error?.localizedDescription ?? "Write failed"
+                }
+            }
         }
     }
 
     func resizeTerminal(width: Int, height: Int) {
-        let _ = shellChannel?.requestSizeWidth(UInt(width), height: UInt(height))
+        guard let shellChannel else { return }
+        DispatchQueue.global(qos: .userInitiated).async {
+            let _ = shellChannel.requestSizeWidth(UInt(width), height: UInt(height))
+        }
     }
 
     private func startKeepAlive() {

@@ -92,7 +92,7 @@ final class ServerEditViewModel {
             if authMethod == .password {
                 try await sshService.connect(to: server, password: password)
             } else {
-                let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("test_key")
+                let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(server.id.uuidString)_test_key")
                 try privateKey.write(to: tempURL, atomically: true, encoding: .utf8)
                 try await sshService.connect(to: server, privateKeyPath: tempURL.path)
                 try? FileManager.default.removeItem(at: tempURL)

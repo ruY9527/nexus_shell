@@ -8,8 +8,16 @@ struct TerminalView: View {
     @State private var showQuickCommands: Bool = false
     @State private var showCommandHistory: Bool = false
     @State private var fontSize: Double = 14
+    @State private var fontName: String = "Menlo"
 
     let server: Server
+
+    private var terminalFont: Font {
+        if fontName == "SF Mono" {
+            return .system(size: fontSize, design: .monospaced)
+        }
+        return .custom(fontName, size: fontSize)
+    }
 
     init(server: Server) {
         self.server = server
@@ -24,7 +32,7 @@ struct TerminalView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         Text(viewModel.buffer.fullAttributedString)
-                            .font(.system(size: fontSize, design: .monospaced))
+                            .font(terminalFont)
                             .textSelection(.enabled)
                             .lineSpacing(0)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -74,12 +82,14 @@ struct TerminalView: View {
 
                     Button {
                         fontSize = max(10, fontSize - 1)
+                        UserDefaults.standard.set(fontSize, forKey: "terminal_font_size")
                     } label: {
                         Label("Decrease Font", systemImage: "textformat.size.smaller")
                     }
 
                     Button {
                         fontSize = min(24, fontSize + 1)
+                        UserDefaults.standard.set(fontSize, forKey: "terminal_font_size")
                     } label: {
                         Label("Increase Font", systemImage: "textformat.size.larger")
                     }
@@ -104,6 +114,11 @@ struct TerminalView: View {
             CommandHistorySheet(viewModel: viewModel)
         }
         .onAppear {
+            let defaults = UserDefaults.standard
+            let savedFontSize = defaults.double(forKey: "terminal_font_size")
+            if savedFontSize > 0 { fontSize = savedFontSize }
+            fontName = defaults.string(forKey: "terminal_font_name") ?? "Menlo"
+
             viewModel = TerminalViewModel(server: server, modelContext: modelContext)
             Task { await viewModel.connect() }
         }
@@ -151,6 +166,7 @@ struct QuickCommandsSheet: View {
             List {
                 ForEach(viewModel.quickCommands) { command in
                     Button {
+                        HapticManager.selection()
                         viewModel.sendCommand(command.command)
                         dismiss()
                     } label: {
@@ -190,6 +206,7 @@ struct CommandHistorySheet: View {
             List {
                 ForEach(viewModel.recentCommands, id: \.self) { command in
                     Button {
+                        HapticManager.selection()
                         viewModel.sendCommand(command)
                         dismiss()
                     } label: {

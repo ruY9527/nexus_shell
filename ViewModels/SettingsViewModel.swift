@@ -63,16 +63,22 @@ final class SettingsViewModel {
 
     func loadSettings() {
         let defaults = UserDefaults.standard
+
+        // Register defaults for keys that should have non-zero initial values
+        defaults.register(defaults: [
+            "haptic_feedback": true,
+            "auto_lock_timeout": 300.0,
+            "ssh_connection_timeout": 10.0,
+            "ssh_command_timeout": 30.0,
+            "terminal_font_size": 14.0
+        ])
+
         biometricEnabled = defaults.bool(forKey: "biometric_enabled")
         autoLockTimeout = defaults.double(forKey: "auto_lock_timeout")
-        if autoLockTimeout == 0 { autoLockTimeout = 300 }
         defaultPort = defaults.string(forKey: "default_port") ?? "22"
         sshConnectionTimeout = defaults.double(forKey: "ssh_connection_timeout")
-        if sshConnectionTimeout == 0 { sshConnectionTimeout = 10 }
         sshCommandTimeout = defaults.double(forKey: "ssh_command_timeout")
-        if sshCommandTimeout == 0 { sshCommandTimeout = 30 }
         terminalFontSize = defaults.double(forKey: "terminal_font_size")
-        if terminalFontSize == 0 { terminalFontSize = 14 }
         terminalFontName = defaults.string(forKey: "terminal_font_name") ?? "Menlo"
         colorScheme = ColorSchemeOption(rawValue: defaults.string(forKey: "color_scheme") ?? "System") ?? .system
         hapticFeedback = defaults.bool(forKey: "haptic_feedback")
